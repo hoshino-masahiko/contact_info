@@ -21,8 +21,6 @@ const FIELDS = [
 ];
 
 const state = {
-  username: null,
-  session: null,
   idToken: null,
 };
 
@@ -68,40 +66,6 @@ async function login() {
       AuthParameters: { USERNAME: username, PASSWORD: password },
     });
 
-    state.username = username;
-
-    if (result.ChallengeName === "NEW_PASSWORD_REQUIRED") {
-      state.session = result.Session;
-      el("login-section").style.display = "none";
-      el("new-password-section").style.display = "block";
-      return;
-    }
-
-    onAuthenticated(result.AuthenticationResult.IdToken);
-  } catch (err) {
-    showMessage(err.message);
-  }
-}
-
-async function submitNewPassword() {
-  const newPassword = el("new-password").value;
-  if (!newPassword) {
-    showMessage("新しいパスワードを入力してください");
-    return;
-  }
-
-  showMessage("");
-  try {
-    const result = await cognitoRequest("RespondToAuthChallenge", {
-      ChallengeName: "NEW_PASSWORD_REQUIRED",
-      ClientId: window.APP_CONFIG.userPoolClientId,
-      Session: state.session,
-      ChallengeResponses: {
-        USERNAME: state.username,
-        NEW_PASSWORD: newPassword,
-      },
-    });
-    el("new-password-section").style.display = "none";
     onAuthenticated(result.AuthenticationResult.IdToken);
   } catch (err) {
     showMessage(err.message);
@@ -112,7 +76,6 @@ function onAuthenticated(idToken) {
   state.idToken = idToken;
   sessionStorage.setItem("idToken", idToken);
   el("login-section").style.display = "none";
-  el("new-password-section").style.display = "none";
   el("profile-section").style.display = "block";
   loadProfile();
 }
@@ -185,7 +148,6 @@ function logout() {
 }
 
 el("login-button").addEventListener("click", login);
-el("new-password-button").addEventListener("click", submitNewPassword);
 el("save-button").addEventListener("click", saveProfile);
 el("logout-button").addEventListener("click", logout);
 

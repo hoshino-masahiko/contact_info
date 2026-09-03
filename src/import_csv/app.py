@@ -37,6 +37,13 @@ def _ensure_cognito_user(employee_id, birth_date):
         TemporaryPassword=initial_password,
         MessageAction="SUPPRESS",
     )
+    # 本パスワードとして確定させ、初回ログイン時の強制変更を発生させない
+    cognito.admin_set_user_password(
+        UserPoolId=USER_POOL_ID,
+        Username=employee_id,
+        Password=initial_password,
+        Permanent=True,
+    )
     return initial_password
 
 

@@ -8,7 +8,7 @@
   input[readonly] { background: #eee; }
   button { margin-top: 16px; padding: 8px 16px; font-size: 1rem; }
   #message { margin-top: 12px; color: #b00; white-space: pre-wrap; }
-  #profile-section, #new-password-section { display: none; }
+  #profile-section { display: none; }
 </style>
 
 <h1>従業員情報ポータル</h1>
@@ -22,14 +22,6 @@
     <input id="login-password" type="password" autocomplete="current-password" />
   </label>
   <button id="login-button">ログイン</button>
-</div>
-
-<div id="new-password-section">
-  <p>初回ログインです。新しいパスワードを設定してください。</p>
-  <label>新しいパスワード
-    <input id="new-password" type="password" autocomplete="new-password" />
-  </label>
-  <button id="new-password-button">パスワードを設定</button>
 </div>
 
 <div id="profile-section">
