@@ -1,0 +1,239 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  従業員情報ポータル（S3静的ホスティング + API Gateway + Lambda + DynamoDB + Cognito）
+  CSV取込（社員番号をキーに登録）/ 従業員本人による閲覧・編集 / CSV出力（管理者が手動実行）
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 128
+
+Resources:
+
+  # --------------------------------------------------------------------
+  # DynamoDB: 従業員マスタ（PK = 社員番号）
+  # --------------------------------------------------------------------
+  EmployeeTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "社員番号"
+          AttributeType: S
+      KeySchema:
+        - AttributeName: "社員番号"
+          KeyType: HASH
+
+  # --------------------------------------------------------------------
+  # S3: フロントエンド静的ホスティング用バケット
+  # --------------------------------------------------------------------
+  WebsiteBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      WebsiteConfiguration:
+        IndexDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
+  WebsiteBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref WebsiteBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "${WebsiteBucket.Arn}/*"
+
+  # --------------------------------------------------------------------
+  # S3: CSV取込・出力用バケット（incoming/ にアップロードで取込トリガー）
+  # --------------------------------------------------------------------
+  DataBucket:
+    Type: AWS::S3::Bucket
+
+  # --------------------------------------------------------------------
+  # Cognito: 従業員認証用ユーザープール（ユーザー名 = 社員番号）
+  # --------------------------------------------------------------------
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: employee-portal-users
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      Policies:
+        PasswordPolicy:
+          # 初期パスワードは「社員番号+生年月日」（数字のみ）のため、大文字・小文字は必須にしない
+          MinimumLength: 8
+          RequireUppercase: false
+          RequireLowercase: false
+          RequireNumbers: true
+          RequireSymbols: false
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_ADMIN_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  # --------------------------------------------------------------------
+  # API Gateway (HTTP API) + Cognito JWT 認可
+  # --------------------------------------------------------------------
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - !GetAtt WebsiteBucket.WebsiteURL
+        AllowMethods:
+          - GET
+          - PUT
+          - OPTIONS
+        AllowHeaders:
+          - content-type
+          - authorization
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            JwtConfiguration:
+              issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
+              audience:
+                - !Ref UserPoolClient
+            IdentitySource: "$request.header.Authorization"
+        DefaultAuthorizer: CognitoAuthorizer
+
+  # --------------------------------------------------------------------
+  # Lambda: 本人情報の取得
+  # --------------------------------------------------------------------
+  GetEmployeeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/get_employee/
+      Handler: app.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref EmployeeTable
+          PK_ATTRIBUTE_NAME: "社員番号"
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EmployeeTable
+      Events:
+        Get:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /me
+            Method: get
+
+  # --------------------------------------------------------------------
+  # Lambda: 本人情報の更新
+  # --------------------------------------------------------------------
+  UpdateEmployeeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/update_employee/
+      Handler: app.handler
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref EmployeeTable
+          PK_ATTRIBUTE_NAME: "社員番号"
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EmployeeTable
+      Events:
+        Put:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref HttpApi
+            Path: /me
+            Method: put
+
+  # --------------------------------------------------------------------
+  # Lambda: CSV取込（DataBucket の incoming/ 配下にアップロードでトリガー）
+  # --------------------------------------------------------------------
+  ImportCsvFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/import_csv/
+      Handler: app.handler
+      Timeout: 60
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref EmployeeTable
+          PK_ATTRIBUTE_NAME: "社員番号"
+          BIRTH_DATE_ATTRIBUTE_NAME: "生年月日"
+          USER_POOL_ID: !Ref UserPool
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref EmployeeTable
+        - S3ReadPolicy:
+            BucketName: !Ref DataBucket
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminGetUser
+              Resource: !GetAtt UserPool.Arn
+      Events:
+        CsvUploaded:
+          Type: S3
+          Properties:
+            Bucket: !Ref DataBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: incoming/
+
+  # --------------------------------------------------------------------
+  # Lambda: CSV出力（管理者が手動実行。 aws lambda invoke で呼び出す）
+  # --------------------------------------------------------------------
+  ExportCsvFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/export_csv/
+      Handler: app.handler
+      Timeout: 60
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref EmployeeTable
+          PK_ATTRIBUTE_NAME: "社員番号"
+          DATA_BUCKET: !Ref DataBucket
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref EmployeeTable
+        - S3WritePolicy:
+            BucketName: !Ref DataBucket
+
+Outputs:
+  WebsiteURL:
+    Description: フロントエンド（S3静的ホスティング）URL
+    Value: !GetAtt WebsiteBucket.WebsiteURL
+  WebsiteBucketName:
+    Description: フロントエンドをアップロードするバケット名
+    Value: !Ref WebsiteBucket
+  DataBucketName:
+    Description: CSV取込・出力用バケット名（incoming/ にCSVをアップロード）
+    Value: !Ref DataBucket
+  ApiUrl:
+    Description: API Gateway エンドポイント
+    Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+  UserPoolId:
+    Description: Cognito ユーザープールID
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Description: Cognito アプリクライアントID
+    Value: !Ref UserPoolClient
+  Region:
+    Description: デプロイ先リージョン
+    Value: !Ref AWS::Region

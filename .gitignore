@@ -1,0 +1,6 @@
+.aws-sam/
+__pycache__/
+*.pyc
+
+# デプロイ環境ごとの値が入るため個別管理（frontend/config.example.js を参照）
+frontend/config.js

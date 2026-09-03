@@ -1,0 +1,42 @@
+<meta charset="utf-8" />
+<title>従業員情報ポータル</title>
+<style>
+  body { font-family: sans-serif; max-width: 480px; margin: 40px auto; padding: 0 16px; }
+  h1 { font-size: 1.2rem; }
+  label { display: block; margin-top: 10px; font-size: 0.85rem; color: #333; }
+  input { width: 100%; padding: 6px; box-sizing: border-box; font-size: 1rem; }
+  input[readonly] { background: #eee; }
+  button { margin-top: 16px; padding: 8px 16px; font-size: 1rem; }
+  #message { margin-top: 12px; color: #b00; white-space: pre-wrap; }
+  #profile-section, #new-password-section { display: none; }
+</style>
+
+<h1>従業員情報ポータル</h1>
+<div id="message"></div>
+
+<div id="login-section">
+  <label>社員番号
+    <input id="login-username" autocomplete="username" />
+  </label>
+  <label>パスワード
+    <input id="login-password" type="password" autocomplete="current-password" />
+  </label>
+  <button id="login-button">ログイン</button>
+</div>
+
+<div id="new-password-section">
+  <p>初回ログインです。新しいパスワードを設定してください。</p>
+  <label>新しいパスワード
+    <input id="new-password" type="password" autocomplete="new-password" />
+  </label>
+  <button id="new-password-button">パスワードを設定</button>
+</div>
+
+<div id="profile-section">
+  <form id="profile-form"></form>
+  <button id="save-button">登録する</button>
+  <button id="logout-button" type="button">ログアウト</button>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
