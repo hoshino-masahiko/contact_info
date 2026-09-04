@@ -31,7 +31,8 @@ cd employee-portal
 aws cloudformation deploy \
   --template-file infra/hosted-zone.yaml \
   --stack-name employee-portal-hosted-zone \
-  --region ap-northeast-1
+  --region ap-northeast-1 \
+  --tags Project=renrakusaki
 
 aws cloudformation describe-stacks \
   --stack-name employee-portal-hosted-zone \
@@ -66,7 +67,8 @@ aws cloudformation deploy \
   --template-file infra/certificate.yaml \
   --stack-name employee-portal-certificate \
   --region us-east-1 \
-  --parameter-overrides HostedZoneId=<ステージ1のHostedZoneId>
+  --parameter-overrides HostedZoneId=<ステージ1のHostedZoneId> \
+  --tags Project=renrakusaki
 
 aws cloudformation describe-stacks \
   --stack-name employee-portal-certificate \
@@ -81,10 +83,13 @@ NS委任が反映済みであれば数分でDNS検証が完了し `CREATE_COMPLE
 ```bash
 sam build
 sam deploy --guided \
+  --tags Project=renrakusaki \
   --parameter-overrides \
     HostedZoneId=<ステージ1のHostedZoneId> \
     AcmCertificateArn=<ステージ3のCertificateArn>
 ```
+
+`--guided` で入力した内容（タグ含む）は `samconfig.toml` に保存されるので、2回目以降は `sam deploy` だけで同じ設定が使われます。
 
 デプロイ完了後、以下のOutputsが表示されるので控えてください。
 
@@ -95,6 +100,33 @@ sam deploy --guided \
 - `ApiUrl`
 - `UserPoolClientId`
 - `Region`
+
+## タグによるコスト検索・削除
+
+3つのスタック（`employee-portal-hosted-zone` / `employee-portal-certificate` / 本体スタック）すべてに `--tags Project=renrakusaki` を付けてデプロイすることで、CloudFormationがスタック内のタグ対応リソース（DynamoDB、S3、Lambda、CloudFront、ACM証明書、Route53ホストゾーンなど）に自動で同じタグを継承させます。個々のリソースにタグ定義を書く必要はありません。
+
+- **コスト確認**: [Cost Explorer](https://console.aws.amazon.com/cost-management/home) でタグ `Project = renrakusaki` でフィルタすれば、この一式にかかった費用だけを確認できます（初回はタグをコスト配分タグとして有効化する必要があります: 請求ダッシュボード → コスト配分タグ）。
+- **削除**: [Resource Groups](https://console.aws.amazon.com/resource-groups/) でタグ `Project = renrakusaki` を条件にグループを作れば、関連リソースを一覧できます。ただし実際の削除は3つのCloudFormationスタックを `aws cloudformation delete-stack` する（本体 → certificate → hosted-zone の順）のが安全です。
+
+なお、Route53のレコードセットやCognitoのアプリクライアントなど、CloudFormation上そもそもタグに対応していないリソース種別が一部あります（これらは親リソース経由で管理されるため、単体では課金対象にもならないものがほとんどです）。
+
+## 月額コストの目安（利用者100〜200人・分散アクセスの規模）
+
+すべて概算です。実際の請求はCost Explorerで確認してください。
+
+| サービス | 目安 | 備考 |
+|---|---|---|
+| Route53 ホストゾーン | $0.50/月 | 固定費（クエリ課金はほぼ$0） |
+| CloudFront | ほぼ$0 | 無料利用枠（データ転送1TB/月・リクエスト1,000万件/月）内に収まる想定 |
+| S3 | ほぼ$0 | 数十KB〜数MBの静的ファイル・CSVのみ |
+| API Gateway (HTTP API) | ほぼ$0 | 月間数千リクエスト程度なら$0.01未満 |
+| Lambda | ほぼ$0 | 無料利用枠（100万リクエスト/月）内に収まる想定 |
+| DynamoDB (オンデマンド) | ほぼ$0 | 200件程度の読み書きなら数セント未満 |
+| Cognito | $0 | 50,000 MAUまで無料利用枠 |
+| ACM証明書 | $0 | 無料 |
+| **合計目安** | **$0.5〜1/月程度**（≒ 数十円〜150円程度） | ほぼRoute53ホストゾーンの固定費のみ |
+
+利用者数・アクセス頻度がこの規模である限り、コストはほぼRoute53の固定費$0.50/月に張り付く想定です。為替レートで円換算額は変動します。
 
 CloudFrontディストリビューションの作成には数分〜十数分かかります。
 
