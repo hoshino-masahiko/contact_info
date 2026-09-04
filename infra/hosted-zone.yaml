@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  portal.tokaiec.co.jp 用のRoute53パブリックホストゾーン。
+  tokaiec.co.jp 本体のゾーンはさくらインターネット側のまま変更しない
+  （このサブドメインだけをRoute53に委任する）。
+
+Parameters:
+  DomainName:
+    Type: String
+    Default: portal.tokaiec.co.jp
+
+Resources:
+  HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Ref DomainName
+
+Outputs:
+  HostedZoneId:
+    Value: !Ref HostedZone
+  NameServers:
+    Description: さくらのDNS設定で portal をNSレコードとして委任する先（4件）
+    Value: !Join [", ", !GetAtt HostedZone.NameServers]

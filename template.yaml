@@ -10,6 +10,17 @@ Globals:
     Timeout: 30
     MemorySize: 128
 
+Parameters:
+  DomainName:
+    Type: String
+    Default: portal.tokaiec.co.jp
+  AcmCertificateArn:
+    Type: String
+    Description: infra/certificate.yaml (us-east-1) の Outputs.CertificateArn
+  HostedZoneId:
+    Type: String
+    Description: infra/hosted-zone.yaml の Outputs.HostedZoneId
+
 Resources:
 
   # --------------------------------------------------------------------
@@ -50,6 +61,49 @@ Resources:
             Principal: "*"
             Action: s3:GetObject
             Resource: !Sub "${WebsiteBucket.Arn}/*"
+
+  # --------------------------------------------------------------------
+  # CloudFront: HTTPS配信（独自ドメイン portal.tokaiec.co.jp）
+  # 事前に infra/hosted-zone.yaml と infra/certificate.yaml のデプロイが必要
+  # --------------------------------------------------------------------
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        Aliases:
+          - !Ref DomainName
+        ViewerCertificate:
+          AcmCertificateArn: !Ref AcmCertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
+        Origins:
+          - Id: WebsiteOrigin
+            DomainName: !Select [2, !Split ["/", !GetAtt WebsiteBucket.WebsiteURL]]
+            CustomOriginConfig:
+              OriginProtocolPolicy: http-only
+        DefaultCacheBehavior:
+          TargetOriginId: WebsiteOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
+          CachedMethods: [GET, HEAD]
+          Compress: true
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+
+  DnsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      Name: !Ref DomainName
+      Type: A
+      AliasTarget:
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
+        # CloudFrontのAliasTarget用ホストゾーンIDは全リージョン共通の固定値
+        HostedZoneId: Z2FDTNDATAQYW2
 
   # --------------------------------------------------------------------
   # S3: CSV取込・出力用バケット（incoming/ にアップロードで取込トリガー）
@@ -93,7 +147,7 @@ Resources:
     Properties:
       CorsConfiguration:
         AllowOrigins:
-          - !GetAtt WebsiteBucket.WebsiteURL
+          - !Sub "https://${DomainName}"
         AllowMethods:
           - GET
           - PUT
@@ -216,8 +270,11 @@ Resources:
             BucketName: !Ref DataBucket
 
 Outputs:
+  PortalURL:
+    Description: 従業員がアクセスするHTTPSのURL
+    Value: !Sub "https://${DomainName}"
   WebsiteURL:
-    Description: フロントエンド（S3静的ホスティング）URL
+    Description: フロントエンド（S3静的ホスティング、HTTP直アクセス用・動作確認用）
     Value: !GetAtt WebsiteBucket.WebsiteURL
   WebsiteBucketName:
     Description: フロントエンドをアップロードするバケット名

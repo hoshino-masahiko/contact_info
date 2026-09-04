@@ -1,39 +1,102 @@
 # 従業員情報ポータル
 
 CSVで従業員一覧を取り込み、従業員が自分の情報をWebで閲覧・編集し、DynamoDBに登録。
-管理者は後日CSVとして出力できます。
+管理者は後日CSVとして出力できます。HTTPS化のため独自ドメイン（`portal.tokaiec.co.jp`）をCloudFront経由で配信します。
 
 ## 構成
 
-- フロントエンド: S3静的Webホスティング（`frontend/`）
+- フロントエンド: S3静的Webホスティング + CloudFront（HTTPS配信、独自ドメイン）
+- DNS/証明書: Route53（`portal` サブドメインのみ委任）+ ACM
 - 認証: Amazon Cognito（ユーザー名 = 社員番号）
 - API: API Gateway (HTTP API) + Lambda（Python 3.12）
 - DB: DynamoDB（PK = `社員番号`）
 - CSV取込: 管理者がS3の `incoming/` にアップロード → S3イベントでLambda起動 → DynamoDBへ登録 + 新規社員のCognitoユーザーを自動作成
 - CSV出力: 管理者がLambdaを手動実行 → S3の `export/` にCSVを生成
 
+> `tokaiec.co.jp` 本体のDNSゾーンはさくらインターネット側で管理されたままです。今回はサブドメイン `portal.tokaiec.co.jp` だけをRoute53に委任するので、メール等の既存レコードには影響しません。
+
 ## 事前準備
 
 - AWS CLI（設定済み・デプロイ権限のあるプロファイル）
 - [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html)
 - Python 3.12
+- さくらインターネットのレンタルサーバー コントロールパネルでNSレコードを追加できること
 
-## デプロイ手順
+## デプロイ手順（3段階）
+
+### ステージ1: Route53ホストゾーンの作成
 
 ```bash
 cd employee-portal
-sam build
-sam deploy --guided
+aws cloudformation deploy \
+  --template-file infra/hosted-zone.yaml \
+  --stack-name employee-portal-hosted-zone \
+  --region ap-northeast-1
+
+aws cloudformation describe-stacks \
+  --stack-name employee-portal-hosted-zone \
+  --region ap-northeast-1 \
+  --query "Stacks[0].Outputs"
 ```
 
-`sam deploy --guided` の対話で環境名などを入力すると、初回はスタック名・リージョンなどを保存する `samconfig.toml` が作られます。デプロイ完了後、以下のOutputsが表示されるので控えてください。
+`NameServers`（4件）と `HostedZoneId` が出力されます。控えてください。
 
-- `WebsiteURL`
+### ステージ2: さくら側でNS委任 + DNS伝播待ち
+
+さくらインターネットのコントロールパネルで `tokaiec.co.jp` のゾーン編集を開き、以下を追加します。
+
+- ホスト名: `portal`
+- 種別: `NS`
+- 値: ステージ1で出力された4件のネームサーバーを1件ずつ登録
+
+反映を待ってから委任できているか確認します（数分〜数時間かかることがあります）。
+
+```bash
+dig NS portal.tokaiec.co.jp
+```
+
+ステージ1で出力された4件のネームサーバーが返ってくれば完了です。**ここが確認できるまでステージ3には進まないでください**（ACM証明書のDNS検証が終わらず待ち続けてしまいます）。
+
+### ステージ3: ACM証明書の発行（us-east-1固定）
+
+CloudFrontで使う証明書は必ず `us-east-1` で発行する必要があります。
+
+```bash
+aws cloudformation deploy \
+  --template-file infra/certificate.yaml \
+  --stack-name employee-portal-certificate \
+  --region us-east-1 \
+  --parameter-overrides HostedZoneId=<ステージ1のHostedZoneId>
+
+aws cloudformation describe-stacks \
+  --stack-name employee-portal-certificate \
+  --region us-east-1 \
+  --query "Stacks[0].Outputs"
+```
+
+NS委任が反映済みであれば数分でDNS検証が完了し `CREATE_COMPLETE` になります。`CertificateArn` を控えてください。
+
+### ステージ4: 本体スタックのデプロイ
+
+```bash
+sam build
+sam deploy --guided \
+  --parameter-overrides \
+    HostedZoneId=<ステージ1のHostedZoneId> \
+    AcmCertificateArn=<ステージ3のCertificateArn>
+```
+
+デプロイ完了後、以下のOutputsが表示されるので控えてください。
+
+- `PortalURL`（従業員がアクセスするHTTPSのURL）
+- `WebsiteURL`（S3直アクセス用・動作確認用、HTTPのまま）
 - `WebsiteBucketName`
 - `DataBucketName`
 - `ApiUrl`
 - `UserPoolClientId`
 - `Region`
+
+CloudFrontディストリビューションの作成には数分〜十数分かかります。
 
 ## フロントエンドの設定・公開
 
@@ -53,7 +116,7 @@ window.APP_CONFIG = {
 aws s3 sync frontend/ s3://<WebsiteBucketName>/
 ```
 
-ブラウザで `WebsiteURL` を開くと画面が表示されます。
+ブラウザで `PortalURL`（`https://portal.tokaiec.co.jp`）を開くと画面が表示されます。
 
 ## 従業員CSVの取込
 
@@ -71,13 +134,12 @@ aws s3 cp "連絡先.txt" s3://<DataBucketName>/incoming/employees.csv
   - このパスワードは作成時点で本パスワードとして確定します（初回ログイン時の変更要求はありません）
   - 生年月日が未入力の行はCognitoユーザーを作成しません（`ImportCsvFunction` のログに警告が出ます）
 
-パスワードは社員番号と生年月日から一意に決まるため、従業員自身に個別連絡する必要はありません（本人が知っている情報のみで組み立てられます）。ただしパスワードは推測可能な値なので、社内ネットワーク限定公開など、この点を踏まえた運用にしてください。
+パスワードは社員番号と生年月日から一意に決まるため、従業員自身に個別連絡する必要はありません（本人が知っている情報のみで組み立てられます）。ただしパスワードは推測可能な値なので、この点を踏まえた運用にしてください。
 
 ## 従業員のログイン・編集
 
-1. `WebsiteURL` にアクセスし、社員番号 + 初期パスワードでログイン
-2. 初回ログイン時は新しいパスワードの設定を求められます
-3. 自分の情報が表示されるので、変更があれば編集して「登録する」を押すとDynamoDBに反映されます（承認フローなし・即時反映）
+1. `PortalURL`（`https://portal.tokaiec.co.jp`）にアクセスし、社員番号 + パスワード（社員番号+生年月日）でログイン
+2. 自分の情報が表示されるので、変更があれば編集して「登録する」を押すとDynamoDBに反映されます（承認フローなし・即時反映）
 
 ## CSV出力（管理者が手動実行）
 
@@ -93,6 +155,6 @@ aws s3 cp s3://<DataBucketName>/export/employees_20260101_120000.csv ./employees
 
 ## 運用上の注意（このまま本番利用する場合の検討事項）
 
-- **HTTPS化**: 現状S3静的WebホスティングのエンドポイントはHTTPのみです。ログイン情報を扱うため、CloudFront + ACM証明書でHTTPS化することを推奨します。
-- **初期パスワードの配布**: 現状CloudWatch Logsへの出力のみです。人数が増える場合は、SES経由の個別メール送信など、より安全な配布方法への変更を検討してください。
+- **S3への直接アクセス**: `WebsiteURL`（S3直URL・HTTP）は動作確認用に残していますが、引き続き誰でもアクセス可能です。CloudFront経由のみに限定したい場合はカスタムヘッダーでのオリジン検証などの追加対策を検討してください。
+- **初期パスワードの配布**: 社員番号と生年月日から機械的に決まるため配布作業は不要ですが、推測可能な値である点を踏まえ、社外に公開しない運用（社内ネットワーク限定の告知など）を推奨します。
 - **監査ログ**: 現在は変更履歴を保持していません。誰がいつ何を変更したかを残したい場合は、更新時にDynamoDB Streamsで履歴テーブルに書き出す構成を追加できます。
