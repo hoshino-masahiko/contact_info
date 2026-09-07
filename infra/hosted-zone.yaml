@@ -1,8 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  portal.tokaiec.co.jp 用のRoute53パブリックホストゾーン。
-  tokaiec.co.jp 本体のゾーンはさくらインターネット側のまま変更しない
-  （このサブドメインだけをRoute53に委任する）。
+  Route53 public hosted zone for portal.tokaiec.co.jp.
+  The tokaiec.co.jp zone itself stays on Sakura Internet's DNS;
+  only this subdomain is delegated to Route53.
+  (Kept ASCII-only: the deploying Windows machine's AWS CLI fails to
+  read non-ASCII template files due to a system codepage issue.)
 
 Parameters:
   DomainName:
@@ -19,5 +21,5 @@ Outputs:
   HostedZoneId:
     Value: !Ref HostedZone
   NameServers:
-    Description: さくらのDNS設定で portal をNSレコードとして委任する先（4件）
+    Description: Delegate "portal" as NS records at Sakura to these 4 name servers
     Value: !Join [", ", !GetAtt HostedZone.NameServers]

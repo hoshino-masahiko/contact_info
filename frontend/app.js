@@ -1,24 +1,40 @@
 const PK_FIELD = "社員番号";
-const FIELDS = [
-  { key: "社員番号", label: "社員番号", readOnly: true },
-  { key: "氏名", label: "氏名" },
-  { key: "生年月日", label: "生年月日 (YYYYMMDD)" },
-  { key: "郵便番号", label: "郵便番号" },
-  { key: "都道府県", label: "都道府県" },
-  { key: "市町村", label: "市町村" },
-  { key: "番地", label: "番地" },
-  { key: "建物", label: "建物" },
-  { key: "電話番号", label: "電話番号" },
-  { key: "メールアドレス", label: "メールアドレス" },
-  { key: "緊急連絡先名1", label: "緊急連絡先名（1）" },
-  { key: "続柄1", label: "続柄（1）" },
-  { key: "緊急電話番号1", label: "緊急電話番号（1）" },
-  { key: "緊急メールアドレス", label: "緊急メールアドレス（1）" },
-  { key: "緊急連絡先名2", label: "緊急連絡先名（2）" },
-  { key: "続柄2", label: "続柄（2）" },
-  { key: "緊急電話番号2", label: "緊急電話番号（2）" },
-  { key: "緊急メールアドレス2", label: "緊急メールアドレス（2）" },
+const FIELD_GROUPS = [
+  {
+    title: "基本情報",
+    fields: [
+      { key: "社員番号", label: "社員番号", readOnly: true },
+      { key: "氏名", label: "氏名" },
+      { key: "生年月日", label: "生年月日 (YYYYMMDD)" },
+      { key: "郵便番号", label: "郵便番号" },
+      { key: "都道府県", label: "都道府県" },
+      { key: "市町村", label: "市町村" },
+      { key: "番地", label: "番地" },
+      { key: "建物", label: "建物" },
+      { key: "電話番号", label: "電話番号" },
+      { key: "メールアドレス", label: "メールアドレス" },
+    ],
+  },
+  {
+    title: "緊急連絡先（1）",
+    fields: [
+      { key: "緊急連絡先名1", label: "緊急連絡先名" },
+      { key: "続柄1", label: "続柄" },
+      { key: "緊急電話番号1", label: "緊急電話番号" },
+      { key: "緊急メールアドレス", label: "緊急メールアドレス" },
+    ],
+  },
+  {
+    title: "緊急連絡先（2）",
+    fields: [
+      { key: "緊急連絡先名2", label: "緊急連絡先名" },
+      { key: "続柄2", label: "続柄" },
+      { key: "緊急電話番号2", label: "緊急電話番号" },
+      { key: "緊急メールアドレス2", label: "緊急メールアドレス" },
+    ],
+  },
 ];
+const FIELDS = FIELD_GROUPS.flatMap((group) => group.fields);
 
 const state = {
   idToken: null,
@@ -83,15 +99,26 @@ function onAuthenticated(idToken) {
 function renderForm(data) {
   const form = el("profile-form");
   form.innerHTML = "";
-  FIELDS.forEach((field) => {
-    const label = document.createElement("label");
-    label.textContent = field.label;
-    const input = document.createElement("input");
-    input.id = `field-${field.key}`;
-    input.value = data[field.key] || "";
-    if (field.readOnly) input.readOnly = true;
-    label.appendChild(input);
-    form.appendChild(label);
+  FIELD_GROUPS.forEach((group) => {
+    const section = document.createElement("section");
+    section.className = "field-group";
+
+    const heading = document.createElement("h2");
+    heading.textContent = group.title;
+    section.appendChild(heading);
+
+    group.fields.forEach((field) => {
+      const label = document.createElement("label");
+      label.textContent = field.label;
+      const input = document.createElement("input");
+      input.id = `field-${field.key}`;
+      input.value = data[field.key] || "";
+      if (field.readOnly) input.readOnly = true;
+      label.appendChild(input);
+      section.appendChild(label);
+    });
+
+    form.appendChild(section);
   });
 }
 

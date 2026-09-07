@@ -1,7 +1,10 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  portal.tokaiec.co.jp 用のACM証明書（CloudFrontで使うため us-east-1 に必ずデプロイする）。
-  hosted-zone.yaml のデプロイ後、さくら側でNS委任が完了してから実行すること。
+  ACM certificate for portal.tokaiec.co.jp (must be deployed in us-east-1
+  for use with CloudFront). Deploy after hosted-zone.yaml, and only once
+  the NS delegation at Sakura has propagated.
+  (Kept ASCII-only: the deploying Windows machine's AWS CLI fails to
+  read non-ASCII template files due to a system codepage issue.)
 
 Parameters:
   DomainName:
@@ -9,7 +12,7 @@ Parameters:
     Default: portal.tokaiec.co.jp
   HostedZoneId:
     Type: String
-    Description: hosted-zone.yaml の Outputs.HostedZoneId
+    Description: hosted-zone.yaml Outputs.HostedZoneId
 
 Resources:
   Certificate:
