@@ -80,16 +80,23 @@ NS委任が反映済みであれば数分でDNS検証が完了し `CREATE_COMPLE
 
 ### ステージ4: 本体スタックのデプロイ
 
+S3への直接アクセスを遮断するための秘密値を先に生成します（値自体はリポジトリに残らないので都度控えておいてください）。
+
+```bash
+openssl rand -hex 16
+```
+
 ```bash
 sam build
 sam deploy --guided \
   --tags Project=renrakusaki \
   --parameter-overrides \
     HostedZoneId=<ステージ1のHostedZoneId> \
-    AcmCertificateArn=<ステージ3のCertificateArn>
+    AcmCertificateArn=<ステージ3のCertificateArn> \
+    OriginVerifySecret=<生成した秘密値>
 ```
 
-`--guided` で入力した内容（タグ含む）は `samconfig.toml` に保存されるので、2回目以降は `sam deploy` だけで同じ設定が使われます。
+`--guided` で入力した内容（タグ含む）は `samconfig.toml` に保存されますが、`OriginVerifySecret` は `NoEcho` パラメータのため平文では保存されません。2回目以降のデプロイでも `--parameter-overrides OriginVerifySecret=<同じ値>` を明示的に指定してください（値を変えると、既存のCloudFrontキャッシュ内の古いRefererヘッダーとS3ポリシーの新しい秘密値が一時的に不整合になるため、変更する場合はCloudFrontの反映完了後にアクセス確認をしてください）。
 
 デプロイ完了後、以下のOutputsが表示されるので控えてください。
 
@@ -187,6 +194,6 @@ aws s3 cp s3://<DataBucketName>/export/employees_20260101_120000.csv ./employees
 
 ## 運用上の注意（このまま本番利用する場合の検討事項）
 
-- **S3への直接アクセス**: `WebsiteURL`（S3直URL・HTTP）は動作確認用に残していますが、引き続き誰でもアクセス可能です。CloudFront経由のみに限定したい場合はカスタムヘッダーでのオリジン検証などの追加対策を検討してください。
+- **S3直アクセス制限**: 対応済みです。CloudFrontが秘密のRefererヘッダー（`OriginVerifySecret`）を付けてS3へ転送し、S3バケットポリシーはそのヘッダーを持つリクエストのみ許可します。`WebsiteURL`（S3直URL・HTTP）に直接アクセスするとAccess Deniedになります。
 - **初期パスワードの配布**: 社員番号と生年月日から機械的に決まるため配布作業は不要ですが、推測可能な値である点を踏まえ、社外に公開しない運用（社内ネットワーク限定の告知など）を推奨します。
 - **監査ログ**: 現在は変更履歴を保持していません。誰がいつ何を変更したかを残したい場合は、更新時にDynamoDB Streamsで履歴テーブルに書き出す構成を追加できます。

@@ -20,6 +20,13 @@ Parameters:
   HostedZoneId:
     Type: String
     Description: infra/hosted-zone.yaml の Outputs.HostedZoneId
+  OriginVerifySecret:
+    Type: String
+    NoEcho: true
+    MinLength: 16
+    Description: >
+      CloudFrontがS3オリジンへ転送するRefererヘッダーの秘密値。
+      S3への直接アクセスを遮断するために使用（例: `openssl rand -hex 16` で生成）。
 
 Resources:
 
@@ -57,10 +64,15 @@ Resources:
       Bucket: !Ref WebsiteBucket
       PolicyDocument:
         Statement:
+          # CloudFrontが付与する秘密のRefererヘッダーを持つリクエストのみ許可し、
+          # S3静的Webホスティングエンドポイントへの直接アクセスを遮断する
           - Effect: Allow
             Principal: "*"
             Action: s3:GetObject
             Resource: !Sub "${WebsiteBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                aws:Referer: !Ref OriginVerifySecret
 
   # --------------------------------------------------------------------
   # CloudFront: HTTPS配信（独自ドメイン portal.tokaiec.co.jp）
@@ -83,6 +95,9 @@ Resources:
             DomainName: !Select [2, !Split ["/", !GetAtt WebsiteBucket.WebsiteURL]]
             CustomOriginConfig:
               OriginProtocolPolicy: http-only
+            OriginCustomHeaders:
+              - HeaderName: Referer
+                HeaderValue: !Ref OriginVerifySecret
         DefaultCacheBehavior:
           TargetOriginId: WebsiteOrigin
           ViewerProtocolPolicy: redirect-to-https
@@ -274,7 +289,7 @@ Outputs:
     Description: 従業員がアクセスするHTTPSのURL
     Value: !Sub "https://${DomainName}"
   WebsiteURL:
-    Description: フロントエンド（S3静的ホスティング、HTTP直アクセス用・動作確認用）
+    Description: S3静的ホスティングの元URL（CloudFront以外からのアクセスはRefererヘッダー不一致によりAccess Deniedになる）
     Value: !GetAtt WebsiteBucket.WebsiteURL
   WebsiteBucketName:
     Description: フロントエンドをアップロードするバケット名
