@@ -13,12 +13,14 @@ const FIELD_GROUPS = [
       { key: "建物", label: "建物" },
       { key: "電話番号", label: "電話番号" },
       { key: "メールアドレス", label: "メールアドレス" },
+      { key: "LINE ID", label: "LINE ID" },
     ],
   },
   {
     title: "緊急連絡先（1）",
     fields: [
       { key: "緊急連絡先名1", label: "緊急連絡先名" },
+      { key: "フリガナ1", label: "フリガナ" },
       { key: "続柄1", label: "続柄" },
       { key: "緊急電話番号1", label: "緊急電話番号" },
       { key: "緊急メールアドレス", label: "緊急メールアドレス" },
@@ -28,6 +30,7 @@ const FIELD_GROUPS = [
     title: "緊急連絡先（2）",
     fields: [
       { key: "緊急連絡先名2", label: "緊急連絡先名" },
+      { key: "フリガナ2", label: "フリガナ" },
       { key: "続柄2", label: "続柄" },
       { key: "緊急電話番号2", label: "緊急電話番号" },
       { key: "緊急メールアドレス2", label: "緊急メールアドレス" },
