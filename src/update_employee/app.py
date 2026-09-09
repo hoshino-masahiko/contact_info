@@ -1,10 +1,14 @@
 import json
 import os
+from datetime import datetime, timedelta, timezone
 
 import boto3
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 PK_ATTRIBUTE_NAME = os.environ["PK_ATTRIBUTE_NAME"]
+UPDATED_AT_ATTRIBUTE_NAME = "変更日時"
+
+JST = timezone(timedelta(hours=9))
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(TABLE_NAME)
@@ -40,10 +44,12 @@ def handler(event, context):
     if not existing:
         return _response(404, {"message": "従業員情報が見つかりません"})
 
-    # 社員番号（PK）はクライアントからの入力で変更させない
+    # 社員番号（PK）と変更日時はクライアントからの入力で変更させない
     updates.pop(PK_ATTRIBUTE_NAME, None)
+    updates.pop(UPDATED_AT_ATTRIBUTE_NAME, None)
 
     merged = {**existing, **updates, PK_ATTRIBUTE_NAME: employee_id}
+    merged[UPDATED_AT_ATTRIBUTE_NAME] = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     table.put_item(Item=merged)
 
     return _response(200, merged)

@@ -140,11 +140,16 @@ async function apiRequest(path, options = {}) {
   return data;
 }
 
+function renderUpdatedAt(data) {
+  el("updated-at-value").textContent = data["変更日時"] || "-";
+}
+
 async function loadProfile() {
   showMessage("");
   try {
     const data = await apiRequest("/me");
     renderForm(data);
+    renderUpdatedAt(data);
   } catch (err) {
     showMessage(err.message);
   }
@@ -159,11 +164,12 @@ async function saveProfile() {
   });
 
   try {
-    await apiRequest("/me", {
+    const data = await apiRequest("/me", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     });
+    renderUpdatedAt(data);
     showMessage("登録しました");
   } catch (err) {
     showMessage(err.message);
