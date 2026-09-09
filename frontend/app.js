@@ -49,6 +49,10 @@ function showMessage(text) {
   el("message").textContent = text || "";
 }
 
+function showProfileMessage(text) {
+  el("profile-message").textContent = text || "";
+}
+
 function cognitoIdpUrl() {
   return `https://cognito-idp.${window.APP_CONFIG.region}.amazonaws.com/`;
 }
@@ -146,6 +150,7 @@ function renderUpdatedAt(data) {
 
 async function loadProfile() {
   showMessage("");
+  showProfileMessage("");
   try {
     const data = await apiRequest("/me");
     renderForm(data);
@@ -156,7 +161,7 @@ async function loadProfile() {
 }
 
 async function saveProfile() {
-  showMessage("");
+  showProfileMessage("");
   const updates = {};
   FIELDS.forEach((field) => {
     if (field.readOnly) return;
@@ -170,9 +175,9 @@ async function saveProfile() {
       body: JSON.stringify(updates),
     });
     renderUpdatedAt(data);
-    showMessage("登録しました");
+    showProfileMessage("登録しました");
   } catch (err) {
-    showMessage(err.message);
+    showProfileMessage(err.message);
   }
 }
 
