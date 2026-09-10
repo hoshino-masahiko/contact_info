@@ -11,7 +11,7 @@ const FIELD_GROUPS = [
       { key: "市町村", label: "市町村" },
       { key: "番地", label: "番地" },
       { key: "建物", label: "建物" },
-      { key: "電話番号", label: "電話番号" },
+      { key: "携帯番号_個人", label: "携帯番号_個人" },
       { key: "メールアドレス", label: "メールアドレス" },
       { key: "LINE ID", label: "LINE ID" },
     ],
