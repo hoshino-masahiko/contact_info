@@ -88,7 +88,13 @@ def handler(event, context):
             # CSVの列名をそのままDynamoDBの属性名として保存する（列名の変換・マッピングをしない設計）
             item = {k: (v if v is not None else "") for k, v in row.items() if k}
             item[PK_ATTRIBUTE_NAME] = employee_id
-            table.put_item(Item=item)  # 同じ社員番号が既にあれば上書き（アップサート）
+
+            # 既存レコードにCSVへ無い属性（例: 本人がWeb画面で保存した際の「変更日時」）があれば、
+            # そのまま引き継ぐ。put_itemはItemの内容で完全に上書きするため、ここでマージしておかないと
+            # CSV再取込のたびに「変更日時」等のシステム管理項目が消えてしまう。
+            existing = table.get_item(Key={PK_ATTRIBUTE_NAME: employee_id}).get("Item") or {}
+            merged_item = {**existing, **item}
+            table.put_item(Item=merged_item)  # 同じ社員番号が既にあれば上書き（アップサート）
             row_count += 1
 
             birth_date = (row.get(BIRTH_DATE_ATTRIBUTE_NAME) or "").strip()
