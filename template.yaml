@@ -1,45 +1,31 @@
-# CloudFormationテンプレートのフォーマットバージョン（固定値）
 AWSTemplateFormatVersion: '2010-09-09'
-# SAM（Serverless Application Model）の簡略記法を使うための宣言。
-# これを書くと、AWS::Serverless::Function のような短い書き方が、デプロイ時にCloudFormationの
-# 正式なリソース定義（Lambda本体+IAMロール+イベント設定など）へ自動展開される。
-# この展開処理自体もAWS管理のLambda（マクロ）で行われるため、デプロイ時に
-# --capabilities CAPABILITY_AUTO_EXPAND の指定が必要になる。
 Transform: AWS::Serverless-2016-10-31
-# テンプレート全体の説明（CloudFormationコンソールのスタック詳細に表示される）
 Description: >
   Employee information portal (S3 static hosting + API Gateway + Lambda + DynamoDB + Cognito).
   CSV import (keyed by employee number) / self-service view & edit / CSV export (manual, by an admin).
-  NOTE: this file previously had its comments/values kept ASCII-only (Japanese written as
-  \uXXXX escapes) because the AWS CLI on the deploying Windows machine fails to read
-  non-ASCII template files (system codepage issue). It now has plain Japanese comments for
-  readability, which means a fresh ASCII-safe copy (escaping non-ASCII characters) needs to
-  be regenerated before the next `aws cloudformation package/deploy` from that same machine.
+  NOTE: this template's comments/descriptions are kept ASCII-only, and the two Japanese
+  attribute-name literals below are written as XXXX escapes, because the AWS CLI on the
+  deploying Windows machine fails to read non-ASCII template files (system codepage issue).
+  The actual DynamoDB attribute names / env var values are still the Japanese words
+  for "employee number" and "date of birth" (see AttributeName / PK_ATTRIBUTE_NAME
+  and BIRTH_DATE_ATTRIBUTE_NAME below).
 
-# Lambda関数（AWS::Serverless::Function）全体に共通して適用されるデフォルト設定。
-# 各関数で個別に上書きしない限りこの値が使われる。
 Globals:
   Function:
-    Runtime: python3.12   # 全Lambda共通のランタイム
-    Timeout: 30            # 秒。個別の関数でTimeoutを指定すればこちらが優先される
-    MemorySize: 128        # MB
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 128
 
-# デプロイ時に外部（コマンドラインの--parameter-overrides）から値を渡せる入力パラメータ
 Parameters:
-  # 独自ドメイン名。CloudFrontのAliasesやRoute53のレコード名に使う
   DomainName:
     Type: String
     Default: portal.tokaiec.co.jp
-  # infra/certificate.yaml（us-east-1）が発行したACM証明書のARN。CloudFrontにアタッチする
   AcmCertificateArn:
     Type: String
     Description: Outputs.CertificateArn from infra/certificate.yaml (us-east-1)
-  # infra/hosted-zone.yamlが作成したRoute53ホストゾーンのID。CloudFront向けAレコードを置く先
   HostedZoneId:
     Type: String
     Description: Outputs.HostedZoneId from infra/hosted-zone.yaml
-  # CloudFront->S3間だけで使う秘密のReferer値。S3直アクセスを遮断するために使う。
-  # NoEcho: trueなので、コンソールやCLI出力にこの値そのものは表示されない
   OriginVerifySecret:
     Type: String
     NoEcho: true
@@ -48,47 +34,36 @@ Parameters:
       Secret value CloudFront forwards to the S3 origin as a Referer header,
       used to block direct access to S3 (e.g. generate with `openssl rand -hex 16`).
 
-# ここから実際に作成されるAWSリソースの定義
 Resources:
 
   # --------------------------------------------------------------------
   # DynamoDB: employee master table (PK = employee number attribute)
   # --------------------------------------------------------------------
-  # 従業員マスタを1件=1従業員で保持するテーブル。属性はスキーマレス（CSVの列がそのまま属性になる）で、
-  # ここで明示的に定義するのはパーティションキー（社員番号）だけでよい。
   EmployeeTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      # オンデマンド課金。使った分だけ課金され、事前のキャパシティ設計が不要
       BillingMode: PAY_PER_REQUEST
-      # パーティションキーとして使う属性の型を宣言（DynamoDBでは主キーの属性だけ事前定義が必要）
       AttributeDefinitions:
-        - AttributeName: "社員番号"
-          AttributeType: S  # 文字列型
-      # 実際にパーティションキーとして使う属性を指定
+        - AttributeName: "\u793E\u54E1\u756A\u53F7"
+          AttributeType: S
       KeySchema:
-        - AttributeName: "社員番号"
-          KeyType: HASH  # DynamoDBの用語でパーティションキーを指す（ソートキーはSORT/RANGE）
+        - AttributeName: "\u793E\u54E1\u756A\u53F7"
+          KeyType: HASH
 
   # --------------------------------------------------------------------
   # S3: bucket for the static frontend
   # --------------------------------------------------------------------
-  # フロントエンド（index.html/app.js/config.js）を置くバケット。静的Webホスティング機能を有効化。
   WebsiteBucket:
     Type: AWS::S3::Bucket
     Properties:
       WebsiteConfiguration:
-        IndexDocument: index.html  # ルートアクセス時に返すファイル
-      # S3バケットのデフォルトはパブリックアクセスを全面ブロックする設定になっているため、
-      # 下のWebsiteBucketPolicyでのアクセス許可が効くように、ブロックを解除しておく
+        IndexDocument: index.html
       PublicAccessBlockConfiguration:
         BlockPublicAcls: false
         BlockPublicPolicy: false
         IgnorePublicAcls: false
         RestrictPublicBuckets: false
 
-  # WebsiteBucketへのアクセス許可を定義するバケットポリシー。
-  # 「誰でもGetObject可能」に見えるが、Conditionにより実質CloudFront経由のみに絞っている。
   WebsiteBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -98,80 +73,62 @@ Resources:
           # Only allow requests that carry the secret Referer header CloudFront adds,
           # so the S3 static website endpoint can't be accessed directly.
           - Effect: Allow
-            Principal: "*"          # 誰からのリクエストでも対象にはなるが…
+            Principal: "*"
             Action: s3:GetObject
             Resource: !Sub "${WebsiteBucket.Arn}/*"
             Condition:
               StringEquals:
-                # …Refererヘッダーがこの秘密値と一致する場合のみ許可される。
-                # この値を知っているのはCloudFront（下のOriginCustomHeadersで設定）だけなので、
-                # 実質「CloudFront経由のリクエストのみ許可」という制御になる
                 aws:Referer: !Ref OriginVerifySecret
 
   # --------------------------------------------------------------------
   # CloudFront: HTTPS distribution for the custom domain portal.tokaiec.co.jp
   # Requires infra/hosted-zone.yaml and infra/certificate.yaml to be deployed first
   # --------------------------------------------------------------------
-  # 独自ドメイン+HTTPSでフロントエンドを配信するCDN。S3の静的Webホスティングエンドポイントを
-  # オリジン（配信元）として、HTTPSへの変換とキャッシュ、独自ドメイン対応を行う。
   CloudFrontDistribution:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
         Enabled: true
-        DefaultRootObject: index.html  # ルートパス（/）アクセス時に返すファイル
-        # このディストリビューションが応答する独自ドメイン名（CNAME相当）
+        DefaultRootObject: index.html
         Aliases:
           - !Ref DomainName
-        # HTTPS化に使う証明書の設定
         ViewerCertificate:
-          AcmCertificateArn: !Ref AcmCertificateArn  # infra/certificate.yamlで発行した証明書
-          SslSupportMethod: sni-only                  # SNI方式（追加コストなしで独自ドメインのHTTPS化ができる）
-          MinimumProtocolVersion: TLSv1.2_2021         # 許可する最低TLSバージョン
-        # 配信元（オリジン）の設定。S3の「静的Webホスティングエンドポイント」を使うため、
-        # S3オリジンタイプではなく、通常のWebサーバーとして扱うCustomOriginConfigを使う
+          AcmCertificateArn: !Ref AcmCertificateArn
+          SslSupportMethod: sni-only
+          MinimumProtocolVersion: TLSv1.2_2021
         Origins:
           - Id: WebsiteOrigin
-            # WebsiteBucket.WebsiteURLは"http://bucket.s3-website-region.amazonaws.com"という形式なので、
-            # スキーム(http://)を取り除いてホスト名部分だけを取り出している
             DomainName: !Select [2, !Split ["/", !GetAtt WebsiteBucket.WebsiteURL]]
             CustomOriginConfig:
-              OriginProtocolPolicy: http-only  # S3静的Webホスティングエンドポイントは元々HTTPのみ対応のため
-            # CloudFrontがオリジン（S3）へリクエストを転送する際に追加するヘッダー。
-            # ここで秘密のRefererを付与することで、上のWebsiteBucketPolicyの条件と噛み合わせている
+              OriginProtocolPolicy: http-only
             OriginCustomHeaders:
               - HeaderName: Referer
                 HeaderValue: !Ref OriginVerifySecret
-        # デフォルトのキャッシュ・転送ルール（パスごとに個別ルールを作っていないので、これが全パスに適用される）
         DefaultCacheBehavior:
           TargetOriginId: WebsiteOrigin
-          ViewerProtocolPolicy: redirect-to-https  # HTTPアクセスは自動でHTTPSへリダイレクト
-          AllowedMethods: [GET, HEAD]                # 静的ファイル配信のみなのでGET/HEADで十分
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods: [GET, HEAD]
           CachedMethods: [GET, HEAD]
-          Compress: true                             # gzip等での自動圧縮を有効化
+          Compress: true
           ForwardedValues:
-            QueryString: false   # クエリ文字列はオリジンに転送しない（キャッシュ効率のため）
+            QueryString: false
             Cookies:
-              Forward: none       # Cookieもオリジンへ転送しない
+              Forward: none
 
-  # Route53にAレコード（エイリアス）を追加し、独自ドメインをCloudFrontに向ける
   DnsRecord:
     Type: AWS::Route53::RecordSet
     Properties:
-      HostedZoneId: !Ref HostedZoneId  # infra/hosted-zone.yamlが作成したゾーン
+      HostedZoneId: !Ref HostedZoneId
       Name: !Ref DomainName
       Type: A
       AliasTarget:
-        DNSName: !GetAtt CloudFrontDistribution.DomainName  # 作成したCloudFrontのドメイン名
+        DNSName: !GetAtt CloudFrontDistribution.DomainName
         # Fixed hosted zone ID for CloudFront alias targets, same in every region
-        # （CloudFrontのAliasTarget用ホストゾーンIDは固定値。全リージョン・全アカウント共通）
         HostedZoneId: Z2FDTNDATAQYW2
 
   # --------------------------------------------------------------------
   # S3: bucket for CSV import/export (upload under incoming/ to trigger import)
   # --------------------------------------------------------------------
-  # CSVファイルの受け渡し用バケット。incoming/配下へのアップロードが取込のトリガーになり、
-  # export/配下にCSV出力の結果が置かれる。
   DataBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -179,41 +136,32 @@ Resources:
       # reference it as a plain string. Using !Ref DataBucket in those policies would add
       # a Role -> Bucket dependency edge that, combined with the S3 event notification's
       # Bucket -> Function edge, forms a circular dependency CloudFormation rejects.
-      # （バケット名を固定文字列にすることで、下のIAMポリシーが!Refではなく同じ文字列を参照できるようにし、
-      # 　循環依存エラーを回避している）
       BucketName: !Sub "${AWS::StackName}-data-${AWS::AccountId}"
 
   # --------------------------------------------------------------------
   # Cognito: user pool for employee auth (username = employee number)
   # --------------------------------------------------------------------
-  # 従業員のログイン認証を担うユーザープール。ユーザー名には社員番号をそのまま使う運用にしている。
   UserPool:
     Type: AWS::Cognito::UserPool
     Properties:
       UserPoolName: employee-portal-users
       AdminCreateUserConfig:
-        # セルフサインアップを禁止し、ImportCsvFunctionによる管理者操作（AdminCreateUser）でのみ
-        # ユーザーを作成できるようにする
         AllowAdminCreateUserOnly: true
       Policies:
         PasswordPolicy:
           # Initial password is "employee number + date of birth" (digits only),
           # so upper/lowercase are not required.
-          # （初期パスワードが「社員番号+生年月日」という数字のみの組み合わせになるため、
-          # 　英大文字・小文字の必須条件は外している）
           MinimumLength: 8
           RequireUppercase: false
           RequireLowercase: false
           RequireNumbers: true
           RequireSymbols: false
 
-  # フロントエンド（ブラウザのJavaScript）がCognitoへログインリクエストを送る際に使うアプリクライアント
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       UserPoolId: !Ref UserPool
-      GenerateSecret: false  # ブラウザから直接呼ぶ（サーバーサイドを介さない）ためシークレットは発行しない
-      # ブラウザから直接ID/パスワードでログインする方式（USER_PASSWORD_AUTH）を許可する
+      GenerateSecret: false
       ExplicitAuthFlows:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_ADMIN_USER_PASSWORD_AUTH
@@ -222,53 +170,44 @@ Resources:
   # --------------------------------------------------------------------
   # API Gateway (HTTP API) + Cognito JWT authorizer
   # --------------------------------------------------------------------
-  # フロントエンドが呼び出すAPI本体。GET/PUT /me の2つのルートを持つ（各Lambda定義のEventsで宣言）。
   HttpApi:
     Type: AWS::Serverless::HttpApi
     Properties:
-      # ブラウザ（portal.tokaiec.co.jp）からのクロスオリジンリクエストを許可するCORS設定
       CorsConfiguration:
         AllowOrigins:
           - !Sub "https://${DomainName}"
         AllowMethods:
           - GET
           - PUT
-          - OPTIONS  # CORSのプリフライトリクエスト用
+          - OPTIONS
         AllowHeaders:
           - content-type
-          - authorization  # Bearer トークンを送るために必要
-      # 全ルート共通の認可設定。Cognitoが発行したIDトークン（JWT）を検証する
+          - authorization
       Auth:
         Authorizers:
           CognitoAuthorizer:
             JwtConfiguration:
-              # このユーザープールが発行したトークンのみ受け付ける（発行者の検証）
               issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}"
-              # このアプリクライアント向けに発行されたトークンのみ受け付ける（audienceの検証）
               audience:
                 - !Ref UserPoolClient
-            # トークンをどこから読むか（Authorizationヘッダーの値をそのままJWTとして扱う）
             IdentitySource: "$request.header.Authorization"
-        DefaultAuthorizer: CognitoAuthorizer  # 個別ルートで上書きしない限りこの認可を必須にする
+        DefaultAuthorizer: CognitoAuthorizer
 
   # --------------------------------------------------------------------
   # Lambda: fetch the caller's own employee record
   # --------------------------------------------------------------------
-  # GET /me の実処理。ログイン中の本人のレコードだけをDynamoDBから返す。
   GetEmployeeFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: src/get_employee/   # このディレクトリがzip化されてLambdaにアップロードされる
-      Handler: app.handler          # app.pyのhandler関数がエントリーポイント
+      CodeUri: src/get_employee/
+      Handler: app.handler
       Environment:
         Variables:
           TABLE_NAME: !Ref EmployeeTable
-          PK_ATTRIBUTE_NAME: "社員番号"
-      # このLambda専用のIAM権限。DynamoDBの読み取りのみ許可（最小権限の原則）
+          PK_ATTRIBUTE_NAME: "\u793E\u54E1\u756A\u53F7"
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref EmployeeTable
-      # API GatewayのGET /meからこの関数を呼び出す、というルーティング設定
       Events:
         Get:
           Type: HttpApi
@@ -280,7 +219,6 @@ Resources:
   # --------------------------------------------------------------------
   # Lambda: update the caller's own employee record
   # --------------------------------------------------------------------
-  # PUT /me の実処理。本人のレコードを更新し、変更日時を記録する。
   UpdateEmployeeFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -289,8 +227,7 @@ Resources:
       Environment:
         Variables:
           TABLE_NAME: !Ref EmployeeTable
-          PK_ATTRIBUTE_NAME: "社員番号"
-      # 読み取りに加えて書き込みも必要なため、Read専用ではなくCrud（Create/Read/Update/Delete）権限を付与
+          PK_ATTRIBUTE_NAME: "\u793E\u54E1\u756A\u53F7"
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EmployeeTable
@@ -305,99 +242,84 @@ Resources:
   # --------------------------------------------------------------------
   # Lambda: CSV import (triggered by an upload under DataBucket's incoming/ prefix)
   # --------------------------------------------------------------------
-  # CSV取込の実処理。DataBucketのincoming/へのアップロードをトリガーに自動起動する。
   ImportCsvFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/import_csv/
       Handler: app.handler
-      Timeout: 60  # CSV件数によっては既定の30秒では足りない可能性があるため延長
+      Timeout: 60
       Environment:
         Variables:
           TABLE_NAME: !Ref EmployeeTable
-          PK_ATTRIBUTE_NAME: "社員番号"        # "社員番号"（CSVのどの列を主キーにするか）
-          BIRTH_DATE_ATTRIBUTE_NAME: "生年月日"  # "生年月日"（初期パスワード生成に使う列）
+          PK_ATTRIBUTE_NAME: "\u793E\u54E1\u756A\u53F7"
+          BIRTH_DATE_ATTRIBUTE_NAME: "\u751F\u5E74\u6708\u65E5"
           USER_POOL_ID: !Ref UserPool
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref EmployeeTable
-        # S3の読み取り権限。BucketNameはDataBucketの物理名と同じ文字列を直接指定している
-        # （循環依存を避けるため!Ref DataBucketを使わない。理由はDataBucketリソースのコメント参照）
         - S3ReadPolicy:
             BucketName: !Sub "${AWS::StackName}-data-${AWS::AccountId}"
-        # Cognitoユーザーの作成・照会・パスワード設定を行うための追加権限（SAMの定型ポリシーには無いため直接記述）
         - Statement:
             - Effect: Allow
               Action:
-                - cognito-idp:AdminCreateUser        # 新規ユーザー作成
-                - cognito-idp:AdminGetUser            # 既存ユーザーか確認（重複作成防止）
-                - cognito-idp:AdminSetUserPassword    # パスワードを本パスワードとして確定
+                - cognito-idp:AdminCreateUser
+                - cognito-idp:AdminGetUser
+                - cognito-idp:AdminSetUserPassword
               Resource: !GetAtt UserPool.Arn
-      # DataBucketへのアップロードで自動起動する、というイベント設定
       Events:
         CsvUploaded:
           Type: S3
           Properties:
             Bucket: !Ref DataBucket
-            Events: s3:ObjectCreated:*  # 新規作成・上書きどちらのアップロードでも起動する
+            Events: s3:ObjectCreated:*
             Filter:
               S3Key:
                 Rules:
                   - Name: prefix
-                    Value: incoming/  # このプレフィックス配下へのアップロードのみが対象（ファイル名は問わない）
+                    Value: incoming/
 
   # --------------------------------------------------------------------
   # Lambda: CSV export (run manually by an admin via `aws lambda invoke`)
   # --------------------------------------------------------------------
-  # CSV出力の実処理。自動トリガーは設定しておらず、管理者が手動で実行する。
   ExportCsvFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/export_csv/
       Handler: app.handler
-      Timeout: 60  # 全件スキャンに時間がかかる可能性を考慮して延長
+      Timeout: 60
       Environment:
         Variables:
           TABLE_NAME: !Ref EmployeeTable
-          PK_ATTRIBUTE_NAME: "社員番号"  # "社員番号"（出力時の並び替えキーにも使う）
-          DATA_BUCKET: !Sub "${AWS::StackName}-data-${AWS::AccountId}"  # 出力先バケット名
+          PK_ATTRIBUTE_NAME: "\u793E\u54E1\u756A\u53F7"
+          DATA_BUCKET: !Sub "${AWS::StackName}-data-${AWS::AccountId}"
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref EmployeeTable
-        # 出力したCSVをS3に書き込むための権限
         - S3WritePolicy:
             BucketName: !Sub "${AWS::StackName}-data-${AWS::AccountId}"
 
-# スタック作成後に`aws cloudformation describe-stacks`等で取得できる出力値
 Outputs:
-  # 従業員が実際にアクセスするURL（HTTPS・独自ドメイン）
   PortalURL:
     Description: HTTPS URL employees use to access the portal
     Value: !Sub "https://${DomainName}"
-  # S3の生のURL（動作確認用。直接アクセスはRefererヘッダー不一致で拒否される）
   WebsiteURL:
     Description: Underlying S3 static hosting URL (direct access is denied; only CloudFront's Referer header is accepted)
     Value: !GetAtt WebsiteBucket.WebsiteURL
-  # フロントエンドファイルをアップロードする先のバケット名（`aws s3 sync`で使う）
   WebsiteBucketName:
     Description: Bucket to upload the frontend to
     Value: !Ref WebsiteBucket
-  # CSV取込・出力に使うバケット名
   DataBucketName:
     Description: Bucket for CSV import/export (upload CSVs under incoming/)
     Value: !Ref DataBucket
-  # フロントエンドのconfig.jsに設定するAPIのベースURL
   ApiUrl:
     Description: API Gateway endpoint
     Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"
-  # フロントエンドのconfig.jsに設定するCognito情報
   UserPoolId:
     Description: Cognito user pool ID
     Value: !Ref UserPool
   UserPoolClientId:
     Description: Cognito app client ID
     Value: !Ref UserPoolClient
-  # デプロイ先リージョン（config.jsに設定する値の1つ）
   Region:
     Description: Deployed region
     Value: !Ref AWS::Region

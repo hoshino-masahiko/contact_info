@@ -1,4 +1,3 @@
-# CloudFormationテンプレートのフォーマットバージョン（固定値）
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   ACM certificate for portal.tokaiec.co.jp (must be deployed in us-east-1
@@ -8,32 +7,23 @@ Description: >
   read non-ASCII template files due to a system codepage issue.)
 
 Parameters:
-  # 証明書の対象ドメイン名
   DomainName:
     Type: String
     Default: portal.tokaiec.co.jp
-  # hosted-zone.yamlのOutputsから受け取る、検証レコードを書き込む先のゾーンID
   HostedZoneId:
     Type: String
     Description: hosted-zone.yaml Outputs.HostedZoneId
 
 Resources:
-  # ACM証明書を1つ発行する（このテンプレートが作るリソースはこれだけ）
   Certificate:
     Type: AWS::CertificateManager::Certificate
     Properties:
-      # 証明書の対象ドメイン
       DomainName: !Ref DomainName
-      # DNSによる所有権検証を使う（メール検証ではない）
       ValidationMethod: DNS
-      # DNS検証の詳細設定。HostedZoneIdを指定しているため、
-      # CloudFormationが検証用CNAMEレコードを自動的にRoute53へ書き込んでくれる
-      # （手動でCNAMEをコピーして登録する手間が不要になる）
       DomainValidationOptions:
         - DomainName: !Ref DomainName
           HostedZoneId: !Ref HostedZoneId
 
 Outputs:
-  # 発行された証明書のARN。本体スタック(template.yaml)のAcmCertificateArnパラメータに渡す
   CertificateArn:
     Value: !Ref Certificate

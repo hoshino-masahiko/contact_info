@@ -1,6 +1,4 @@
-# CloudFormationテンプレートのフォーマットバージョン（固定値、AWSが決めている唯一の値）
 AWSTemplateFormatVersion: '2010-09-09'
-# このテンプレート全体の説明文（CloudFormationコンソールのスタック詳細に表示される）
 Description: >
   Route53 public hosted zone for portal.tokaiec.co.jp.
   The tokaiec.co.jp zone itself stays on Sakura Internet's DNS;
@@ -8,30 +6,20 @@ Description: >
   (Kept ASCII-only: the deploying Windows machine's AWS CLI fails to
   read non-ASCII template files due to a system codepage issue.)
 
-# デプロイ時に外部から値を渡せる入力パラメータの定義
 Parameters:
-  # 対象ドメイン名。--parameter-overridesで上書きしない限りDefaultの値が使われる
   DomainName:
     Type: String
     Default: portal.tokaiec.co.jp
 
-# このテンプレートが実際に作成するAWSリソースの定義
 Resources:
-  # Route53のパブリックホストゾーンを1つ作成する（このテンプレートが作るリソースはこれだけ）
   HostedZone:
     Type: AWS::Route53::HostedZone
     Properties:
-      # ゾーン名。DomainNameパラメータの値（portal.tokaiec.co.jp）がそのまま使われる
       Name: !Ref DomainName
 
-# スタック作成後に`describe-stacks`で取得できる出力値
 Outputs:
-  # ホストゾーンの物理ID。証明書スタック(certificate.yaml)や本体スタック(template.yaml)へ
-  # パラメータとして渡すために必要
   HostedZoneId:
     Value: !Ref HostedZone
-  # AWSが自動割り当てした4件のネームサーバー名。
-  # さくらインターネット側にNSレコードとして登録することで、DNS委任が成立する
   NameServers:
     Description: Delegate "portal" as NS records at Sakura to these 4 name servers
     Value: !Join [", ", !GetAtt HostedZone.NameServers]
