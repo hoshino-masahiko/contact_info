@@ -1,0 +1,547 @@
+<meta charset="utf-8" />
+<title>緊急連絡先登録ポータル構成台帳</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #F6F3EC;
+    --paper-raised: #FFFFFF;
+    --ink: #1C2B39;
+    --ink-soft: #3E4C58;
+    --steel: #5B7280;
+    --rust: #B5602F;
+    --pine: #2B6B5E;
+    --line: #DCD5C6;
+    --line-strong: #C9C0AC;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #12181D;
+      --paper-raised: #1A2229;
+      --ink: #ECE7DC;
+      --ink-soft: #C7C1B4;
+      --steel: #8FA6B3;
+      --rust: #E08A4F;
+      --pine: #5FAE9B;
+      --line: #2A343B;
+      --line-strong: #3A464E;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #12181D;
+    --paper-raised: #1A2229;
+    --ink: #ECE7DC;
+    --ink-soft: #C7C1B4;
+    --steel: #8FA6B3;
+    --rust: #E08A4F;
+    --pine: #5FAE9B;
+    --line: #2A343B;
+    --line-strong: #3A464E;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.65;
+    padding: 56px 24px 96px;
+  }
+  .page { max-width: 900px; margin: 0 auto; }
+
+  h1, h2, h3 { font-family: 'Fraunces', Georgia, 'Times New Roman', serif; color: var(--ink); text-wrap: balance; }
+  h1 { font-size: 2.1rem; font-weight: 700; margin: 0 0 6px; }
+  h2 { font-size: 1.3rem; font-weight: 600; margin: 0 0 4px; }
+  h3 { font-size: 1.02rem; font-weight: 600; margin: 0 0 2px; }
+  p { max-width: 68ch; }
+  code, .mono { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 0.86em; }
+
+  .eyebrow {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+
+  header.hero {
+    border-bottom: 1px solid var(--line-strong);
+    padding-bottom: 28px;
+    margin-bottom: 40px;
+  }
+  header.hero .eyebrow { margin-bottom: 10px; }
+  header.hero p { margin-top: 12px; color: var(--ink-soft); }
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin-top: 18px;
+    font-size: 0.82rem;
+    color: var(--steel);
+  }
+  .meta-row span b { color: var(--ink); font-weight: 600; }
+
+  section { margin-bottom: 52px; }
+  section > .eyebrow { display: block; margin-bottom: 6px; }
+
+  figure {
+    margin: 20px 0 0;
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    background: var(--paper-raised);
+    padding: 20px 18px 16px;
+  }
+  figure svg { display: block; width: 100%; height: auto; max-width: 100%; color: var(--ink); }
+  figcaption {
+    font-size: 0.86rem;
+    color: var(--steel);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    max-width: none;
+  }
+  figcaption b { color: var(--ink-soft); font-weight: 600; }
+
+  .legend { display: flex; gap: 22px; font-size: 0.78rem; color: var(--steel); margin-top: 10px; flex-wrap: wrap; }
+  .legend .swatch { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .swatch i { width: 18px; height: 0; border-top: 2.5px solid; display: inline-block; }
+
+  .table-wrap { overflow-x: auto; margin-top: 16px; border: 1px solid var(--line-strong); border-radius: 4px; }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 0.86rem; }
+  thead th {
+    text-align: left;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--steel);
+    background: var(--paper);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line-strong);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+    color: var(--ink-soft);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody td.id { font-family: 'IBM Plex Mono', monospace; font-size: 0.82em; color: var(--ink); white-space: nowrap; }
+  tbody td.name { color: var(--ink); font-weight: 500; }
+  .group-row td {
+    background: var(--paper);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--pine);
+    padding: 8px 14px;
+  }
+
+  ul.notes { margin: 16px 0 0; padding-left: 0; list-style: none; }
+  ul.notes li {
+    position: relative;
+    padding: 10px 0 10px 26px;
+    border-top: 1px solid var(--line);
+    max-width: 68ch;
+  }
+  ul.notes li:first-child { border-top: none; }
+  ul.notes li::before {
+    content: "—";
+    position: absolute;
+    left: 0;
+    color: var(--rust);
+    font-weight: 600;
+  }
+  ul.notes li b { color: var(--ink); font-weight: 600; }
+
+  .footnote {
+    margin-top: 40px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line-strong);
+    font-size: 0.82rem;
+    color: var(--steel);
+  }
+
+  .loc {
+    display: inline-block;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 1px 7px;
+    border-radius: 3px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .loc-git { background: color-mix(in srgb, var(--pine) 18%, transparent); color: var(--pine); }
+  .loc-local { background: color-mix(in srgb, var(--steel) 20%, transparent); color: var(--ink-soft); }
+  .loc-aws { background: color-mix(in srgb, var(--rust) 18%, transparent); color: var(--rust); }
+
+  .legend-box {
+    background: var(--paper-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 0 0 40px;
+    font-size: 0.85rem;
+  }
+  .legend-box div { margin: 4px 0; }
+</style>
+
+<div class="page">
+
+<header class="hero">
+  <span class="eyebrow">Infrastructure Reference &middot; ap-northeast-1</span>
+  <h1>緊急連絡先登録ポータル 構成台帳</h1>
+  <p>CSVで取り込んだ従業員情報を、本人がWebで閲覧・編集し、DynamoDBに即時反映。管理者は任意のタイミングでCSVに書き戻せる、S3静的配信+API Gateway+Lambda+DynamoDB+Cognitoによるサーバーレス構成です。</p>
+  <div class="meta-row">
+    <span>アカウント <b class="mono">018811607892</b></span>
+    <span>リージョン <b class="mono">ap-northeast-1</b>（証明書のみ <b class="mono">us-east-1</b>）</span>
+    <span>コストタグ <b class="mono">Project=renrakusaki</b></span>
+    <span>公開URL <b class="mono">https://portal.tokaiec.co.jp</b></span>
+  </div>
+</header>
+
+<div class="legend-box">
+  <div><b style="color:var(--ink);">この文書での場所の表記について</b></div>
+  <div><span class="loc loc-git">GitHub</span>ソースの正本。リポジトリ <code>https://github.com/hoshino-masahiko/contact_info</code>。以降、コード中の相対パス（<code>frontend/app.js</code>・<code>src/export_csv/app.py</code>など）はすべてこのリポジトリのルート直下を基準にしている</div>
+  <div><span class="loc loc-local">ローカル</span><code>git clone</code>した先のPC上のフォルダ（既定では<code>contact_info/</code>）。相対パスの基準はGitHubリポジトリのルートと同じ</div>
+  <div><span class="loc loc-aws">AWS</span>実際にデプロイされ、今稼働しているリソース本体（DynamoDB・Lambda・S3など）</div>
+</div>
+
+<section>
+  <span class="eyebrow">Figure 1</span>
+  <h2>配信とログインの経路</h2>
+  <p>従業員が画面を開いてから、自分の情報を読み書きするまでの3つの通信を示します。①画面の取得、②ログイン、③APIへのアクセスは、それぞれ別の相手（S3・Cognito・API Gateway）と直接やり取りします。</p>
+
+  <figure>
+    <svg viewBox="0 0 980 400" role="img" aria-label="従業員のブラウザは、CloudFront経由でS3から画面を取得し、Cognitoに直接ログインしてIDトークンを受け取り、そのトークンをAPI Gatewayに提示してLambda経由でDynamoDBの自分のレコードを読み書きする">
+      <defs>
+        <marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+        </marker>
+      </defs>
+
+      <!-- Actor -->
+      <rect x="20" y="60" width="140" height="280" rx="4" class="dg-box" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="90" y="196" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">従業員</text>
+      <text x="90" y="213" text-anchor="middle" font-size="11" fill="currentColor">(ブラウザ)</text>
+
+      <!-- Row: delivery -->
+      <rect x="300" y="20" width="150" height="46" rx="3" fill="none" stroke="var(--steel)" stroke-width="1.2"/>
+      <text x="375" y="39" text-anchor="middle" font-size="11" fill="var(--steel)">Route53</text>
+      <text x="375" y="54" text-anchor="middle" font-size="10.5" fill="var(--steel)">portal ゾーン</text>
+
+      <rect x="470" y="20" width="150" height="46" rx="3" fill="none" stroke="var(--steel)" stroke-width="1.2"/>
+      <text x="545" y="39" text-anchor="middle" font-size="11" fill="var(--steel)">ACM証明書</text>
+      <text x="545" y="54" text-anchor="middle" font-size="10.5" fill="var(--steel)">(us-east-1)</text>
+
+      <line x1="390" y1="66" x2="415" y2="100" stroke="var(--steel)" stroke-width="1.2" marker-end="url(#arrow1)"/>
+      <line x1="530" y1="66" x2="475" y2="100" stroke="var(--steel)" stroke-width="1.2" marker-end="url(#arrow1)"/>
+
+      <rect x="340" y="100" width="170" height="60" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <text x="425" y="126" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">CloudFront</text>
+      <text x="425" y="143" text-anchor="middle" font-size="11" fill="currentColor">(HTTPS配信)</text>
+
+      <rect x="600" y="100" width="180" height="60" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <text x="690" y="126" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">S3</text>
+      <text x="690" y="143" text-anchor="middle" font-size="11" fill="currentColor">WebsiteBucket</text>
+
+      <line x1="160" y1="120" x2="335" y2="128" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow1)"/>
+      <text x="248" y="108" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">① 画面読込 (HTTPS)</text>
+
+      <line x1="510" y1="130" x2="595" y2="130" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow1)"/>
+      <text x="552" y="120" text-anchor="middle" font-size="10" fill="var(--steel)">Referer一致時のみ許可</text>
+
+      <!-- Row: login -->
+      <rect x="340" y="210" width="170" height="60" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <text x="425" y="236" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">Cognito</text>
+      <text x="425" y="253" text-anchor="middle" font-size="11" fill="currentColor">UserPool</text>
+
+      <line x1="160" y1="230" x2="335" y2="230" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow1)" marker-start="url(#arrow1)"/>
+      <text x="248" y="220" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">② ログイン（社員番号+パスワード）</text>
+      <text x="248" y="266" text-anchor="middle" font-size="10" fill="var(--steel)">→ IDトークン発行</text>
+
+      <!-- Row: API -->
+      <rect x="340" y="320" width="170" height="60" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <text x="425" y="346" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">API Gateway</text>
+      <text x="425" y="363" text-anchor="middle" font-size="11" fill="currentColor">(HTTP API)</text>
+
+      <rect x="600" y="320" width="200" height="60" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <text x="700" y="346" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">Get/UpdateEmployee</text>
+      <text x="700" y="363" text-anchor="middle" font-size="11" fill="currentColor">Function</text>
+
+      <rect x="850" y="320" width="110" height="60" rx="3" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <text x="905" y="346" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">DynamoDB</text>
+      <text x="905" y="363" text-anchor="middle" font-size="11" fill="currentColor">EmployeeTable</text>
+
+      <line x1="160" y1="345" x2="335" y2="350" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow1)"/>
+      <text x="248" y="335" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">③ API呼出し</text>
+      <text x="248" y="384" text-anchor="middle" font-size="10" fill="var(--steel)">Authorization: Bearer IDトークン</text>
+
+      <line x1="425" y1="315" x2="425" y2="275" stroke="var(--steel)" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arrow1)"/>
+      <text x="440" y="298" font-size="10" fill="var(--steel)">JWT検証</text>
+
+      <line x1="510" y1="350" x2="595" y2="350" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow1)"/>
+      <text x="552" y="340" text-anchor="middle" font-size="10" fill="var(--steel)">GET/PUT /me</text>
+
+      <line x1="800" y1="350" x2="845" y2="350" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow1)"/>
+      <text x="822" y="340" text-anchor="middle" font-size="9.5" fill="var(--steel)">R/W</text>
+    </svg>
+    <figcaption><b>画面表示・ログイン・API呼出しは別経路。</b>フロントエンドはCloudFront経由のS3から取得し、認証はブラウザから直接Cognitoへ、業務データの読み書きはIDトークンを添えてAPI Gatewayへ、という3系統の通信で成り立っています。</figcaption>
+  </figure>
+</section>
+
+<section>
+  <span class="eyebrow">Figure 2</span>
+  <h2>CSV取込・出力の経路</h2>
+  <p>取込は<b style="color:var(--pine)">S3イベントで自動起動</b>、出力は<b style="color:var(--rust)">管理者がLambdaコンソールで手動実行</b>という非対称な設計です。</p>
+  <p><b style="color:var(--ink);">CSVのアップロード先（取込）: <code>employee-portal-data-018811607892</code> バケットの <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。このアップロードがそのまま取込処理の起動トリガーになります。<b style="color:var(--ink);">CSVの出力先（エクスポート）: 同じバケットの <code>export/</code> フォルダ配下</b>（管理者がExportCsvFunctionを手動実行した際に生成される）。</p>
+
+  <figure>
+    <svg viewBox="0 0 980 430" role="img" aria-label="管理者がS3のincomingフォルダにCSVをアップロードすると自動でImportCsvFunctionが起動しDynamoDBとCognitoを更新する。出力は管理者がExportCsvFunctionを手動実行し、DynamoDBを全件スキャンしてexportフォルダにCSVを書き出し、管理者がダウンロードする">
+      <defs>
+        <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+        </marker>
+      </defs>
+
+      <rect x="20" y="60" width="130" height="320" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="85" y="216" text-anchor="middle" font-size="13" font-weight="600" fill="currentColor">管理者</text>
+      <text x="85" y="233" text-anchor="middle" font-size="11" fill="currentColor">(コンソール)</text>
+
+      <rect x="220" y="55" width="190" height="335" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="315" y="76" text-anchor="middle" font-size="11" font-weight="600" fill="currentColor">S3 DataBucket</text>
+      <line x1="220" y1="225" x2="410" y2="225" stroke="var(--line-strong)" stroke-width="1"/>
+      <text x="315" y="140" text-anchor="middle" font-size="11" fill="var(--steel)">incoming/</text>
+      <text x="315" y="315" text-anchor="middle" font-size="11" fill="var(--steel)">export/</text>
+
+      <rect x="480" y="60" width="190" height="60" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="575" y="86" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">ImportCsv</text>
+      <text x="575" y="103" text-anchor="middle" font-size="11" fill="currentColor">Function</text>
+
+      <rect x="480" y="330" width="190" height="60" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="575" y="356" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">ExportCsv</text>
+      <text x="575" y="373" text-anchor="middle" font-size="11" fill="currentColor">Function</text>
+
+      <rect x="790" y="20" width="160" height="60" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="870" y="46" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">Cognito</text>
+      <text x="870" y="63" text-anchor="middle" font-size="11" fill="currentColor">UserPool</text>
+
+      <rect x="790" y="175" width="160" height="70" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <text x="870" y="203" text-anchor="middle" font-size="12.5" font-weight="600" fill="currentColor">DynamoDB</text>
+      <text x="870" y="220" text-anchor="middle" font-size="11" fill="currentColor">EmployeeTable</text>
+
+      <!-- import flow (pine) -->
+      <line x1="150" y1="100" x2="215" y2="100" style="stroke:var(--pine)" stroke-width="1.6" marker-end="url(#arrow2)"/>
+      <text x="182" y="90" text-anchor="middle" font-size="10.5" font-weight="600" style="fill:var(--pine)">① CSVアップロード</text>
+
+      <line x1="410" y1="105" x2="475" y2="90" style="stroke:var(--pine)" stroke-width="1.6" marker-end="url(#arrow2)"/>
+      <text x="440" y="80" text-anchor="middle" font-size="10" style="fill:var(--pine)">自動起動</text>
+
+      <line x1="670" y1="75" x2="785" y2="52" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow2)"/>
+      <text x="728" y="55" text-anchor="middle" font-size="10" fill="var(--steel)">③ 未登録なら作成</text>
+
+      <line x1="670" y1="105" x2="785" y2="195" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow2)"/>
+      <text x="740" y="140" text-anchor="middle" font-size="10" fill="var(--steel)">② 登録/更新</text>
+
+      <!-- export flow (rust) -->
+      <path d="M150,340 L150,412 L575,412 L575,392" fill="none" style="stroke:var(--rust)" stroke-width="1.6" marker-end="url(#arrow2)"/>
+      <text x="360" y="405" text-anchor="middle" font-size="10.5" font-weight="600" style="fill:var(--rust)">④ 手動実行 (Lambdaコンソール)</text>
+
+      <line x1="670" y1="345" x2="785" y2="230" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow2)"/>
+      <text x="745" y="300" text-anchor="middle" font-size="10" fill="var(--steel)">⑤ 全件スキャン</text>
+
+      <line x1="475" y1="335" x2="415" y2="300" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow2)"/>
+      <text x="470" y="308" text-anchor="middle" font-size="9.5" fill="var(--steel)">⑥ 書出し</text>
+
+      <line x1="220" y1="315" x2="155" y2="315" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow2)"/>
+      <text x="185" y="305" text-anchor="middle" font-size="9.5" fill="var(--steel)">⑦ DL</text>
+    </svg>
+    <figcaption><b>取込は自動、出力は手動。</b>①〜③がCSV取込（S3アップロードが引き金）、④〜⑦がCSV出力（管理者がLambdaを都度実行）の流れです。</figcaption>
+  </figure>
+
+  <div class="legend">
+    <span class="swatch"><i style="border-color:var(--pine)"></i>自動（イベント駆動）</span>
+    <span class="swatch"><i style="border-color:var(--rust)"></i>手動（管理者操作）</span>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Data Dictionary</span>
+  <h2>従業員レコードの項目定義</h2>
+  <p>DynamoDBの1件（社員番号1件分）が持つ全属性です。属性名はすべて、取り込むCSVファイルの列名と完全に一致します（<b style="color:var(--ink);">画面の項目名・並び順はCSVファイルにそのまま従う</b>という設計上のルールのため。詳しくは下記Follow-upの「画面の項目の並び順ルール」を参照）。「由来」列のCSV列番号は、取込・出力どちらも共通の並び順（21列）を指します。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>属性名</th><th>由来</th><th>コメント</th></tr></thead>
+      <tbody>
+        <tr><td class="id">1</td><td class="name">社員番号 <span style="color:var(--rust);font-size:0.72em;font-weight:600;">PK</span></td><td>CSV列1</td><td>従業員を一意に識別する番号。DynamoDBのパーティションキー。Cognitoのユーザー名にも同じ値を使う</td></tr>
+        <tr><td class="id">2</td><td class="name">氏名</td><td>CSV列2</td><td>従業員の氏名</td></tr>
+        <tr><td class="id">3</td><td class="name">生年月日</td><td>CSV列3</td><td>YYYYMMDD形式の8桁数字。初期パスワード（社員番号+生年月日）の生成にも使う唯一の項目</td></tr>
+        <tr><td class="id">4</td><td class="name">郵便番号</td><td>CSV列4</td><td></td></tr>
+        <tr><td class="id">5</td><td class="name">都道府県</td><td>CSV列5</td><td></td></tr>
+        <tr><td class="id">6</td><td class="name">市区町村</td><td>CSV列6</td><td></td></tr>
+        <tr><td class="id">7</td><td class="name">番地</td><td>CSV列7</td><td></td></tr>
+        <tr><td class="id">8</td><td class="name">建物</td><td>CSV列8</td><td></td></tr>
+        <tr><td class="id">9</td><td class="name">電話番号</td><td>CSV列9</td><td>個人所有の電話番号を入力する運用ルール（会社貸与ではない）。画面上部の案内文で本人に伝えている</td></tr>
+        <tr><td class="id">10</td><td class="name">メールアドレス</td><td>CSV列10</td><td></td></tr>
+        <tr><td class="id">11</td><td class="name">LINE ID</td><td>CSV列11</td><td></td></tr>
+        <tr><td class="id">12</td><td class="name">氏名(緊急連絡先1)</td><td>CSV列12</td><td>緊急連絡先（1人目）の氏名</td></tr>
+        <tr><td class="id">13</td><td class="name">フリガナ(緊急連絡先1)</td><td>CSV列13</td><td></td></tr>
+        <tr><td class="id">14</td><td class="name">続柄(緊急連絡先1)</td><td>CSV列14</td><td>本人との続柄（例: 妻・父など）</td></tr>
+        <tr><td class="id">15</td><td class="name">電話番号(緊急連絡先1)</td><td>CSV列15</td><td></td></tr>
+        <tr><td class="id">16</td><td class="name">メールアドレス(緊急連絡先1)</td><td>CSV列16</td><td></td></tr>
+        <tr><td class="id">17</td><td class="name">氏名(緊急連絡先2)</td><td>CSV列17</td><td>緊急連絡先（2人目）の氏名</td></tr>
+        <tr><td class="id">18</td><td class="name">フリガナ(緊急連絡先2)</td><td>CSV列18</td><td></td></tr>
+        <tr><td class="id">19</td><td class="name">続柄(緊急連絡先2)</td><td>CSV列19</td><td></td></tr>
+        <tr><td class="id">20</td><td class="name">電話番号(緊急連絡先2)</td><td>CSV列20</td><td></td></tr>
+        <tr><td class="id">21</td><td class="name">メールアドレス(緊急連絡先2)</td><td>CSV列21</td><td></td></tr>
+        <tr><td class="id">22</td><td class="name">変更日時</td><td>システム自動生成</td><td style="color:var(--rust);">CSVに対応列なし。<code>PUT /me</code>成功のたびに<code>UpdateEmployeeFunction</code>がJSTで上書き記録（<code>YYYY-MM-DD HH:MM</code>）。画面のログアウトボタン横にのみ表示し、CSV出力には含まれない</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Deployment</span>
+  <h2>デプロイ構成（3つのCloudFormationスタック）</h2>
+  <p>証明書はCloudFront向けに必ずus-east-1で発行する必要があるため、独自ドメインの受け皿（ホストゾーン）→証明書→本体アプリの3段階に分けています。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>スタック名</th><th>リージョン</th><th>内容</th><th>備考</th></tr></thead>
+      <tbody>
+        <tr><td class="name">employee-portal-hosted-zone</td><td class="id">ap-northeast-1</td><td>portal.tokaiec.co.jp 用ホストゾーン</td><td>さくらのDNSからNS委任される受け皿。最初にデプロイ</td></tr>
+        <tr><td class="name">employee-portal-certificate</td><td class="id">us-east-1（固定）</td><td>CloudFront用ACM証明書</td><td>NS委任の反映後でないとDNS検証が終わらない</td></tr>
+        <tr><td class="name">employee-portal</td><td class="id">ap-northeast-1</td><td>下記リソース一式（アプリ本体）</td><td>証明書ARN・ホストゾーンIDを受け取って構築</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Inventory</span>
+  <h2>リソース一覧・コンソールでの探し方</h2>
+  <p>実際に作成された物理名/IDです。マネジメントコンソールの各サービス画面でそのまま検索できます。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>リソース</th><th>物理名 / ID</th><th>コンソール</th><th>役割</th></tr></thead>
+      <tbody>
+        <tr class="group-row"><td colspan="4">フロントエンド配信</td></tr>
+        <tr><td class="name">Route53 ホストゾーン</td><td class="id">Z01829923DVUSDCOCPDUG</td><td>Route53 &gt; ホストゾーン</td><td>tokaiec.co.jpのうち portal だけをAWS側に委任</td></tr>
+        <tr><td class="name">ACM証明書</td><td class="id">arn:...:certificate/34151893-...</td><td>Certificate Manager（us-east-1に切替）</td><td>portal.tokaiec.co.jp のHTTPS証明書</td></tr>
+        <tr><td class="name">CloudFront</td><td class="id">E1L2YU3UWBVT86</td><td>CloudFront &gt; ディストリビューション</td><td>HTTPS配信の本体、独自ドメイン+証明書を紐付け</td></tr>
+        <tr><td class="name">S3 WebsiteBucket</td><td class="id">employee-portal-websitebucket-m044fsfdbjza</td><td>S3</td><td>index.html / app.js を配置。CloudFront以外からのGetObjectは拒否</td></tr>
+
+        <tr class="group-row"><td colspan="4">認証</td></tr>
+        <tr><td class="name">Cognito UserPool</td><td class="id">ap-northeast-1_YfKRaiSJq</td><td>Cognito &gt; ユーザープール</td><td>ユーザー名=社員番号。管理者作成のみ許可</td></tr>
+        <tr><td class="name">UserPoolClient</td><td class="id">1qim8ihltqq0hjdivhpkb3800l</td><td>同上 &gt; アプリクライアント</td><td>フロントエンド用（シークレットなし）</td></tr>
+
+        <tr class="group-row"><td colspan="4">API / 演算</td></tr>
+        <tr><td class="name">API Gateway (HTTP API)</td><td class="id">r16aived4j</td><td>API Gateway</td><td>GET/PUT /me。CognitoのIDトークンをJWTとして検証</td></tr>
+        <tr><td class="name">GetEmployeeFunction</td><td class="id">employee-portal-GetEmployeeFunction-ftrbXrEekmm5</td><td>Lambda</td><td>本人情報の取得</td></tr>
+        <tr><td class="name">UpdateEmployeeFunction</td><td class="id">employee-portal-UpdateEmployeeFunction-5kEjCvzvmpGO</td><td>Lambda</td><td>本人情報の更新（即時反映・承認フローなし）</td></tr>
+        <tr><td class="name">ImportCsvFunction</td><td class="id">employee-portal-ImportCsvFunction-8JwsS2yj5ks9</td><td>Lambda</td><td>CSV取込。DataBucketのS3イベントで自動起動</td></tr>
+        <tr><td class="name">ExportCsvFunction</td><td class="id">employee-portal-ExportCsvFunction-0uTpregs2F5Z</td><td>Lambda</td><td>CSV出力。管理者がコンソールで手動実行</td></tr>
+
+        <tr class="group-row"><td colspan="4">データ</td></tr>
+        <tr><td class="name">DynamoDB EmployeeTable</td><td class="id">employee-portal-EmployeeTable-5GLOF22GE1RV</td><td>DynamoDB</td><td>PK=社員番号。属性名は元CSVの列名（日本語）をそのまま使用。保存の都度「変更日時」を上書き記録</td></tr>
+        <tr><td class="name">S3 DataBucket</td><td class="id">employee-portal-data-018811607892</td><td>S3</td><td>incoming/ が取込入口、export/ が出力先</td></tr>
+
+        <tr class="group-row"><td colspan="4">補助（アプリ実行には無関係）</td></tr>
+        <tr><td class="name">S3 artifacts</td><td class="id">employee-portal-artifacts-018811607892</td><td>S3</td><td>Lambdaコードのデプロイ用一時置き場。手動作成・CloudFormation管理外</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <span class="eyebrow">Design Notes</span>
+  <h2>押さえておきたい設計判断</h2>
+  <ul class="notes">
+    <li><b>S3直アクセスの遮断:</b> CloudFrontがS3への転送時にだけ秘密のRefererヘッダーを付与し、S3バケットポリシーはその値が一致する場合のみ許可します。秘密値自体はパラメータ（NoEcho）として管理しており、この文書にも記載していません。</li>
+    <li><b>初期パスワード:</b> 「社員番号＋生年月日」を作成時点で本パスワードとして確定（AdminSetUserPassword）。初回ログイン時の強制変更は発生しません。</li>
+    <li><b>データの一意キー:</b> 元のCSVに一意キーがなかったため、先頭列として社員番号を追加。CognitoのユーザーIDもこの社員番号をそのまま使います。</li>
+    <li><b>承認フロー:</b> なし。従業員本人の変更はそのままDynamoDBに反映されます。変更のたびに「変更日時」（JST・年月日時分）を上書き記録しますが、過去の変更履歴（誰が何を変えたか）までは保持していません。</li>
+    <li><b>属性名がそのまま日本語:</b> DynamoDBの属性名・CSVの列見出しはどちらも同じ日本語（社員番号・氏名…）。取込・出力のロジックが列名を仲介せずそのまま使えるようにするための設計です。</li>
+    <li><b>CSV取込時の文字コード:</b> UTF-8（BOM付き含む）を優先的に試し、UTF-8として読めない場合はShift-JIS（cp932）にフォールバックする自動判定。取込元がExcelでもモダンなシステム由来でも、どちらの保存形式でも取り込める。</li>
+    <li><b>CSV取込時の上書きルール:</b> 同じ社員番号が既存レコードとして存在する場合、CSVの値をそのまま（空欄・スペースも含めて）上書きする。空欄の列は既存の値を空文字で上書きするため、見た目上は「その項目を削除した」のと同じ結果になる（意図的な仕様）。CSVに列そのものが存在しない属性（「変更日時」など）だけは、既存の値を引き継ぐ。</li>
+  </ul>
+</section>
+
+<section>
+  <span class="eyebrow">Follow-up</span>
+  <h2>個別確認で出た論点の補足</h2>
+  <p>ここまでのやり取りで具体的に確認した4点を記録しておきます。</p>
+
+  <h3 style="margin-top:28px;">Refererの「一致」とは何と何か</h3>
+  <p>一致させているのは、<b style="color:var(--ink)">CloudFrontがS3への転送時に付けるRefererヘッダーの値</b>と、<b style="color:var(--ink)">S3バケットポリシーが要求するRefererヘッダーの値</b>です。どちらも同じ1つの秘密文字列（<code>OriginVerifySecret</code>パラメータ）を参照しているため、常に一致します。ブラウザ本来のRefererとは無関係に、CloudFrontが原点向け通信でだけ独自の合言葉として上書きしています。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>経路</th><th>S3が受け取るReferer</th><th>判定</th></tr></thead>
+      <tbody>
+        <tr><td>ブラウザ→CloudFront→S3</td><td class="id">秘密文字列と一致（CloudFrontが必ず付け替える）</td><td>許可（200）</td></tr>
+        <tr><td>ブラウザ→S3に直接アクセス</td><td class="id">付いていない／別の値</td><td>拒否（403）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:32px;">CSVのデータはいつDynamoDBへ移るか</h3>
+  <p><b style="color:var(--ink)">S3の<code>incoming/</code>へのアップロードが完了した瞬間</b>に、S3イベント経由で<code>ImportCsvFunction</code>が自動起動し、DynamoDBへ書き込まれます（Figure 2 の①→自動起動）。ログインのタイミングでは何も起きません。<code>GET/PUT /me</code>はDynamoDBだけを参照しており、S3には一切アクセスしません。つまり「ログイン後に表示される情報」は、ログインより前のアップロード時点で既にDynamoDBへコピー済みだったものです。</p>
+
+  <h3 style="margin-top:32px;">取込ファイル名は任意か</h3>
+  <p>任意です。S3イベントのトリガー条件は <code>incoming/</code> という<b style="color:var(--ink)">プレフィックス（フォルダ）のみ</b>で、ファイル名は判定していません。<code>incoming/</code>配下であればファイル名は何でも取込が起動します。</p>
+
+  <h3 style="margin-top:32px;">列（項目）を追加できるか</h3>
+  <p>CSV取込とAPIは列名をハードコードしていないため、新しい列を追加してもそのままDynamoDBに保存されます。ただしWebフォームとCSV出力は列の一覧をコードに持っているため、そこまで反映するには小さな修正が必要です。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>処理</th><th>列名の扱い</th></tr></thead>
+      <tbody>
+        <tr><td class="name">CSV取込 → DynamoDB</td><td>ヘッダー行の列名をそのまま属性名として使用。<b style="color:var(--pine)">新しい列があっても無改修で保存される</b></td></tr>
+        <tr><td class="name">閲覧・編集API（GET/PUT /me）</td><td>DynamoDBの中身をそのまま返す/書く。<b style="color:var(--pine)">無改修で通る</b></td></tr>
+        <tr><td class="name">Webフォーム（<span class="loc loc-git">GitHub</span><code>frontend/app.js</code>）</td><td>表示する列の一覧がコードに直書き。<b style="color:var(--rust)">画面に出すにはここへ追記が必要</b></td></tr>
+        <tr><td class="name">CSV出力（<span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code>）</td><td>出力する列の一覧がコードに直書き。<b style="color:var(--rust)">出力に含めるにはここへ追記が必要</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px;">例: 緊急連絡先に住所列を追加する場合 — ①CSVに列を追加してアップロード（保存は無改修で完了）→ ②画面で見せたいなら<code>frontend/app.js</code>のフィールド一覧に追記 → ③出力にも含めたいなら<code>src/export_csv/app.py</code>のHEADERに追記（いずれもリポジトリルート基準のパス）。</p>
+
+  <h3 style="margin-top:32px;">画面の項目の並び順ルール</h3>
+  <p>DynamoDBは属性（map）に決まった並び順を持たないスキーマレスなドキュメントストアです。コンソールで見える順序は実装依存で、保証された仕様ではありません。画面・CSV取込・CSV出力はそれぞれ<b style="color:var(--ink)">別々の順序定義</b>を持っており、DynamoDB内部の並びとは無関係です。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>順序</th><th>決めているもの</th></tr></thead>
+      <tbody>
+        <tr><td class="name">画面の表示順</td><td><span class="loc loc-git">GitHub</span><code>frontend/app.js</code> の <code>FIELD_GROUPS</code> 配列（唯一の正）</td></tr>
+        <tr><td class="name">CSV取込時の列</td><td><span class="loc loc-local">ローカル</span>アップロードするCSVファイルのヘッダー行そのもの</td></tr>
+        <tr><td class="name">CSV出力時の列順</td><td><span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code> の <code>HEADER</code> 定数</td></tr>
+        <tr><td class="name">DynamoDB内部の並び</td><td>保証なし（スキーマレスのため、コンソール表示順が変わることもある）</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:14px;">この4つを意図的に疎結合にしているため、DynamoDBの並びを気にせず列を追加・変更できます（列追加については上記参照）。</p>
+</section>
+
+<section>
+  <span class="eyebrow">Changelog</span>
+  <h2>初回デプロイ後の変更点</h2>
+  <ul class="notes">
+    <li><b>ポータル名称:</b> 画面タイトル・タブタイトルを「緊急連絡先登録ポータル」に変更。保存ボタンのラベルを「登録する」→「変更する」に変更。</li>
+    <li><b>案内文の追加:</b> タイトル直下に「電話番号は個人所有（会社貸与ではなく）を入力」「変更後は画面下の『変更する』を押す」の2行を表示。</li>
+    <li><b>CSVフォーマットの正式確定:</b> 取り込むCSVを21列（Data Dictionary参照）の正式フォーマットとして確定。画面の項目名・並び順はこのCSVの列名・列順にそのまま従う（詳細はFollow-upの「画面の項目の並び順ルール」）。取込処理（<span class="loc loc-git">GitHub</span><code>src/import_csv/app.py</code>）は列名を決め打ちしない設計のため無改修、画面（<span class="loc loc-git">GitHub</span><code>frontend/app.js</code>）とCSV出力（<span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code>）は列名に合わせて改修。あわせて文字コードをUTF-8（BOM付き）優先・Shift-JISへの自動フォールバックに変更。</li>
+    <li><b>変更日時の記録・表示:</b> <code>UpdateEmployeeFunction</code>が保存の都度「変更日時」属性（JST・年月日時分、例: <code>2026-09-09 15:49</code>）をサーバー側で上書き記録（クライアントからの入力では変更不可）。画面はログアウトボタンの右隣に表示。</li>
+    <li><b>保存メッセージの表示位置:</b> 「登録しました」等のメッセージを画面上部から、ボタン直下（画面最下部）に移動。ボタン押下後にスクロールなしで見えるようにするための変更。ログイン時のエラーメッセージは引き続き画面上部に表示。</li>
+  </ul>
+</section>
+
+<div class="footnote">
+  概要レベルの資料です。各リソースの詳細設定（IAMポリシーの中身、DynamoDBのキャパシティ設定など）は個別に確認しながら深掘りください。<br>
+  補足: <code>template.yaml</code> 内の日本語属性名は <code>\uXXXX</code> エスケープで記述されています。デプロイ元Windows端末のAWS CLIが、システムの既定コードページ（cp932）でテンプレートを読もうとして非ASCII文字をデコードできない不具合があったための回避策で、実際にDynamoDBへ作成される属性名は通常通り日本語です。
+</div>
+
+</div>

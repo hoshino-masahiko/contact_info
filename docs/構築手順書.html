@@ -1,0 +1,613 @@
+<meta charset="utf-8" />
+<title>緊急連絡先登録ポータル構築手順書</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #F6F3EC;
+    --paper-raised: #FFFFFF;
+    --ink: #1C2B39;
+    --ink-soft: #3E4C58;
+    --steel: #5B7280;
+    --rust: #B5602F;
+    --pine: #2B6B5E;
+    --line: #DCD5C6;
+    --line-strong: #C9C0AC;
+    --code-bg: #1C2B39;
+    --code-fg: #E8E4DA;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #12181D;
+      --paper-raised: #1A2229;
+      --ink: #ECE7DC;
+      --ink-soft: #C7C1B4;
+      --steel: #8FA6B3;
+      --rust: #E08A4F;
+      --pine: #5FAE9B;
+      --line: #2A343B;
+      --line-strong: #3A464E;
+      --code-bg: #0C1114;
+      --code-fg: #DCE6EA;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #12181D;
+    --paper-raised: #1A2229;
+    --ink: #ECE7DC;
+    --ink-soft: #C7C1B4;
+    --steel: #8FA6B3;
+    --rust: #E08A4F;
+    --pine: #5FAE9B;
+    --line: #2A343B;
+    --line-strong: #3A464E;
+    --code-bg: #0C1114;
+    --code-fg: #DCE6EA;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.65;
+    padding: 56px 24px 96px;
+  }
+  .page { max-width: 860px; margin: 0 auto; }
+
+  h1, h2 { font-family: 'Fraunces', Georgia, 'Times New Roman', serif; color: var(--ink); text-wrap: balance; }
+  h1 { font-size: 2rem; font-weight: 700; margin: 0 0 6px; }
+  h2 { font-size: 1.2rem; font-weight: 600; margin: 0; }
+  p { max-width: 68ch; }
+  code { font-family: 'IBM Plex Mono', 'Courier New', monospace; font-size: 0.86em; color: var(--ink); }
+  a { color: var(--pine); }
+
+  .eyebrow {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+
+  header.hero { border-bottom: 1px solid var(--line-strong); padding-bottom: 24px; margin-bottom: 20px; }
+  header.hero p { margin-top: 12px; }
+  header.hero .backlink { margin-top: 14px; font-size: 0.86rem; }
+
+  .callout {
+    display: flex;
+    gap: 10px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line-strong);
+    border-left: 3px solid var(--rust);
+    border-radius: 4px;
+    padding: 14px 16px;
+    margin: 24px 0 40px;
+    font-size: 0.9rem;
+  }
+  .callout b { color: var(--ink); }
+
+  ol.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+  .step {
+    counter-increment: step;
+    position: relative;
+    padding: 34px 0 34px 56px;
+    border-top: 1px solid var(--line);
+  }
+  .step:first-child { border-top: none; padding-top: 0; }
+  .step::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 36px;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .step:first-child::before { top: 0; }
+  .step .eyebrow { display: block; margin-bottom: 2px; }
+  .step h2 { margin-bottom: 8px; }
+  .step p.desc { margin: 0 0 14px; }
+
+  pre.cmd {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    border-radius: 4px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-family: 'IBM Plex Mono', 'Courier New', monospace;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    margin: 0 0 14px;
+  }
+  pre.cmd .muted { opacity: 0.55; }
+
+  .verify {
+    background: var(--paper-raised);
+    border: 1px solid var(--line-strong);
+    border-left: 3px solid var(--pine);
+    border-radius: 4px;
+    padding: 12px 16px;
+    font-size: 0.86rem;
+  }
+  .verify .eyebrow { color: var(--pine); margin-bottom: 6px; }
+  .verify dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; }
+  .verify dt { color: var(--steel); white-space: nowrap; }
+  .verify dd { margin: 0; color: var(--ink-soft); }
+  .verify dd code { word-break: break-all; }
+  .verify p { margin: 0 0 10px; max-width: none; }
+  .verify p:last-child { margin-bottom: 0; }
+  .verify ul.svc-list { margin: 0 0 10px; padding-left: 20px; }
+  .verify ul.svc-list li { margin: 2px 0; }
+
+  .footnote { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--line-strong); font-size: 0.82rem; color: var(--steel); }
+
+  .flow {
+    background: var(--paper-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    padding: 16px 18px;
+    margin: 0 0 40px;
+    font-size: 0.9rem;
+  }
+  .flow h3 { font-family: 'Fraunces', serif; font-size: 1rem; color: var(--ink); margin: 0 0 8px; }
+  .flow ol { margin: 8px 0 0; padding-left: 20px; }
+  .flow ol li { margin: 4px 0; }
+  .flow .note { margin-top: 10px; color: var(--steel); font-size: 0.85rem; }
+
+  ul.resource-list { list-style: none; margin: 14px 0 16px; padding: 0; }
+  ul.resource-list > li {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    background: var(--paper-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+  }
+  ul.resource-list .rname {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 0.84rem;
+    color: var(--ink);
+    display: block;
+    margin-bottom: 4px;
+    word-break: break-all;
+  }
+  ul.resource-list .rtype { color: var(--steel); font-weight: 400; }
+  ul.resource-list ul { margin: 0; padding-left: 18px; font-size: 0.85rem; }
+  ul.resource-list ul li { margin: 2px 0; }
+
+  .loc {
+    display: inline-block;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    padding: 1px 7px;
+    border-radius: 3px;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .loc-git { background: color-mix(in srgb, var(--pine) 18%, transparent); color: var(--pine); }
+  .loc-local { background: color-mix(in srgb, var(--steel) 20%, transparent); color: var(--ink-soft); }
+  .loc-aws { background: color-mix(in srgb, var(--rust) 18%, transparent); color: var(--rust); }
+
+  .legend-box {
+    background: var(--paper-raised);
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin: 0 0 40px;
+    font-size: 0.85rem;
+  }
+  .legend-box div { margin: 4px 0; }
+</style>
+
+<div class="page">
+
+<header class="hero">
+  <span class="eyebrow">Runbook &middot; ap-northeast-1</span>
+  <h1>緊急連絡先登録ポータル構築手順書</h1>
+  <p>今回の環境をゼロから作る場合の、実行コマンドと「コンソールでどこを見れば確認できるか」をステージ順に並べたものです。すでに稼働中の環境（下記IDはすべて実在の値）をコンソールで辿って答え合わせする使い方もできます。</p>
+  <p class="backlink">構成の全体像・用語の説明は <a href="https://claude.ai/code/artifact/0b7ab018-7eab-4e94-840e-9f64e6dd1987">従業員ポータル構成台帳</a> を参照してください。</p>
+</header>
+
+<div class="callout">
+  <div><b>この手順書のコマンドを、この文書に書かれているのと同じスタック名・同じドメイン名のまま同じAWSアカウントで再実行すると、エラーになります。</b>Stage 1〜4で作成済みのスタックとドメイン委任が既に存在するためです。実際に手を動かして新しい環境を再現したい場合は、別のスタック名または別ドメインを使ってください。「現在稼働中のportal.tokaiec.co.jpの環境が、この手順書の通りに構築されているか」をコンソールで照合するだけであれば、各ステップの「コンソールで確認」欄だけを辿れば十分です。</div>
+</div>
+
+<div class="flow">
+  <h3>CloudFormationは何を、どう作るか</h3>
+  <p>Stage 1・3・4はどれも同じ<code>aws cloudformation deploy</code>を実行していますが、そのたびに何が起きているかは共通です。</p>
+  <ol>
+    <li>手元のPCから<code>aws cloudformation deploy</code>でテンプレート（yaml）をCloudFormationサービスに送る</li>
+    <li>CloudFormationサービスがyamlを読み、書かれているリソースの依存関係を解析する</li>
+    <li>依存関係の順番に沿って、各リソースに対応するAWSサービスのAPIを直接呼び出す（例: DynamoDBならDynamoDBのAPI、LambdaならLambdaのAPI）</li>
+    <li>全リソースの作成が完了したらスタックが<code>CREATE_COMPLETE</code>になる。途中で失敗したら自動でロールバックする</li>
+  </ol>
+  <p class="note">ここにLambdaが介在する工程はありません。Stage 4で作られる4つのLambda関数（Get/UpdateEmployeeFunction・Import/ExportCsvFunction）は、この処理の<b style="color:var(--ink)">結果として作られる成果物</b>であり、デプロイを実行する側ではありません。デプロイが終わったあと、従業員がログインしたりCSVをアップロードしたりした時に初めて動き出します。</p>
+</div>
+
+<div class="legend-box">
+  <div><b style="color:var(--ink);">この文書での場所の表記について</b></div>
+  <div><span class="loc loc-git">GitHub</span>ソースの正本。リポジトリ <code>https://github.com/hoshino-masahiko/contact_info</code></div>
+  <div><span class="loc loc-local">ローカル</span>Stage 0で <code>git clone</code> した先の PC 上のフォルダ。<code>git clone</code> は既定でリポジトリ名と同じ <code>contact_info/</code> フォルダを作る。<b style="color:var(--ink);">以降のコマンド中に出てくる相対パス（<code>infra/hosted-zone.yaml</code>・<code>template.yaml</code>・<code>frontend/</code>・<code>src/</code>など）は、すべてこの <code>contact_info/</code> フォルダを基準（ルート）にしている</b></div>
+  <div><span class="loc loc-aws">AWS</span>実際にデプロイされ、今稼働しているリソース本体。マネジメントコンソールや<code>aws</code>コマンドの実行結果で見えるもの</div>
+</div>
+
+<ol class="steps">
+
+  <li class="step">
+    <span class="eyebrow">Stage 0</span>
+    <h2>事前準備</h2>
+    <p class="desc">AWS CLIが認証済みであることを確認し、<span class="loc loc-git">GitHub</span>のリポジトリを<span class="loc loc-local">ローカル</span>に取得します。SAM CLIは使わず、AWS CLI標準の <code>cloudformation package/deploy</code> だけで完結させます。</p>
+    <pre class="cmd"><span class="muted"># 自分の実行ユーザー/ロールとアカウントIDを確認</span>
+aws sts get-caller-identity
+
+<span class="muted"># GitHub上のテンプレート3種とLambdaコード一式を、ローカルの contact_info/ フォルダへ取得</span>
+git clone https://github.com/hoshino-masahiko/contact_info.git
+cd contact_info</pre>
+    <div class="verify">
+      <span class="eyebrow">コンソールで確認: 権限を持っているか</span>
+      <p>「AWSアカウント」とは、AWSの利用契約の単位であり、12桁のアカウントID（このプロジェクトでは<code>018811607892</code>）で識別されます。1つのAWSアカウントの中に、複数のIAMユーザーやIAMロール（実際に操作を行う認証情報の単位）を作成できます。このデプロイ作業を行う前に、自分が使っているIAMユーザーまたはIAMロールに、次のAWSサービスに対する操作権限が付与されているかを確認してください。</p>
+      <ul class="svc-list">
+        <li>CloudFormation（スタックの作成・更新・削除）</li>
+        <li>IAM（Lambda関数が使うIAMロールの作成）</li>
+        <li>S3（バケットの作成、ファイルのアップロード）</li>
+        <li>Lambda（関数の作成・更新）</li>
+        <li>DynamoDB（テーブルの作成）</li>
+        <li>Cognito（ユーザープールの作成）</li>
+        <li>API Gateway（APIの作成）</li>
+        <li>CloudFront（配信の作成）</li>
+        <li>Route53（DNSレコードの作成）</li>
+        <li>ACM / AWS Certificate Manager（証明書の発行）</li>
+      </ul>
+      <p>確認方法: AWSマネジメントコンソール右上のユーザー名をクリックし、「セキュリティ認証情報」を開くか、IAMサービスの画面で自分のIAMユーザーを開いて「アクセス許可」タブを確認します。上記10個のサービスすべてに対する権限が個別に付与されているか、または<code>AdministratorAccess</code>という1つのポリシー（このAWSアカウント内のほぼ全サービスをまとめて許可するポリシー）が付与されていれば、上記すべての権限を満たします。このプロジェクトを最初に構築した際は、<code>initial-admin-user-018811607892</code>というIAMユーザー（<code>AdministratorAccess</code>が付与済み）を使用しました。</p>
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="eyebrow">Stage 1</span>
+    <h2>Route53ホストゾーンの作成</h2>
+    <p class="desc">サブドメイン（<code>portal.tokaiec.co.jp</code>）専用のホストゾーンを作ります。<code>tokaiec.co.jp</code>本体のゾーンには触れません。</p>
+    <p class="desc"><span class="loc loc-aws">AWS</span>に作られる成果物:</p>
+    <ul class="resource-list">
+      <li>
+        <span class="rname">portal.tokaiec.co.jp <span class="rtype">（Route53 ホストゾーン / Z01829923DVUSDCOCPDUG）</span></span>
+        <ul>
+          <li>さくらから「portal」サブドメインの委任を受ける受け皿</li>
+          <li>証明書のDNS検証レコード（Stage3）とCloudFrontへの案内レコード（Stage4）を置く場所になる</li>
+        </ul>
+      </li>
+    </ul>
+    <pre class="cmd"><span class="muted"># portal.tokaiec.co.jp専用のRoute53ホストゾーンを新規作成</span>
+<span class="muted"># --template-fileはローカル(contact_info/)基準の相対パス</span>
+aws cloudformation deploy \
+  --template-file infra/hosted-zone.yaml \
+  --stack-name employee-portal-hosted-zone \
+  --region ap-northeast-1 \
+  --tags Project=renrakusaki
+
+<span class="muted"># ネームサーバー4件とホストゾーンIDを取得（Stage2・Stage3で使う）</span>
+aws cloudformation describe-stacks \
+  --stack-name employee-portal-hosted-zone \
+  --region ap-northeast-1 --query "Stacks[0].Outputs"</pre>
+    <div class="verify">
+      <span class="eyebrow">コンソールで確認</span>
+      <dl>
+        <dt>Route53</dt><dd>ホストゾーン一覧に <code>portal.tokaiec.co.jp</code> があり、NSレコードが4件（例: <code>ns-877.awsdns-45.net</code> 等）表示されること</dd>
+        <dt>CloudFormation</dt><dd>スタック <code>employee-portal-hosted-zone</code> が <code>CREATE_COMPLETE</code></dd>
+      </dl>
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="eyebrow">Stage 2</span>
+    <h2>さくらインターネット側でNS委任</h2>
+    <p class="desc">さくらの「DNSレコード設定」で、ホスト名<code>portal</code>・種別<code>NS</code>のレコードを4件登録します（値は末尾にドットを付けたFQDN形式、例: <code>ns-877.awsdns-45.net.</code>）。反映まで数分〜数時間かかります。</p>
+    <pre class="cmd"><span class="muted"># さくらに登録したNSレコードが世界のDNSに反映されたか確認</span>
+nslookup -type=NS portal.tokaiec.co.jp</pre>
+    <div class="verify">
+      <span class="eyebrow">コンソールで確認</span>
+      <dl>
+        <dt>さくら管理画面</dt><dd>ドメイン/SSL &gt; tokaiec.co.jp &gt; DNSレコード設定 に <code>portal</code> のNSレコードが4件並んでいること</dd>
+        <dt>コマンド結果</dt><dd><code>nslookup</code>の実行結果に表示される4件のネームサーバー名が、Stage 1の<code>describe-stacks</code>で取得した4件のネームサーバー名と完全に一致すること。<b style="color:var(--rust)">一致が確認できるまではStage 3へ進まないでください</b>（一致する前にStage 3を実行すると、ACM証明書のDNS検証がいつまでも完了しません）</dd>
+      </dl>
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="eyebrow">Stage 3</span>
+    <h2>ACM証明書の発行（us-east-1固定）</h2>
+    <p class="desc">CloudFrontで使う証明書は必ず <code>us-east-1</code> で発行します。NS委任が反映済みなら数分でDNS検証が完了します。</p>
+    <p class="desc"><span class="loc loc-aws">AWS</span>に作られる成果物:</p>
+    <ul class="resource-list">
+      <li>
+        <span class="rname">portal.tokaiec.co.jp <span class="rtype">（ACM証明書 / us-east-1 / ARN末尾 34151893-...）</span></span>
+        <ul>
+          <li>CloudFrontでportal.tokaiec.co.jpをHTTPS配信するためのTLS証明書</li>
+          <li>発行時にRoute53（Stage1のゾーン）へ検証用CNAMEを自動追加。以後の自動更新でも同じCNAMEを使い続ける</li>
+        </ul>
+      </li>
+    </ul>
+    <pre class="cmd"><span class="muted"># CloudFront用のACM証明書をus-east-1で発行。DNS検証レコードはStage1のゾーンに自動追加される</span>
+aws cloudformation deploy \
+  --template-file infra/certificate.yaml \
+  --stack-name employee-portal-certificate \
+  --region us-east-1 \
+  --parameter-overrides HostedZoneId=Z01829923DVUSDCOCPDUG \
+  --tags Project=renrakusaki
+
+<span class="muted"># 発行された証明書のARNを取得（Stage4で使う）</span>
+aws cloudformation describe-stacks \
+  --stack-name employee-portal-certificate \
+  --region us-east-1 --query "Stacks[0].Outputs"</pre>
+    <div class="verify">
+      <span class="eyebrow">コンソールで確認</span>
+      <dl>
+        <dt>Certificate Manager</dt><dd><b style="color:var(--rust)">画面右上のリージョンをus-east-1(バージニア北部)に切替</b>のうえ、<code>portal.tokaiec.co.jp</code> のステータスが「発行済み」</dd>
+      </dl>
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="eyebrow">Stage 4</span>
+    <h2>本体スタックのデプロイ</h2>
+    <p class="desc"><span class="loc loc-local">ローカル</span>の<code>src/</code>配下（<code>contact_info/src/</code>）のLambdaコードをパッケージング（ZIP化して<span class="loc loc-aws">AWS</span>のS3へ）してから、DynamoDB・Cognito・API Gateway・Lambda・CloudFrontをまとめて作成します。</p>
+    <p class="desc">このステージのコマンドは2種類に分かれます。<b style="color:var(--ink);">①`aws s3 mb`によるLambdaコード置き場バケットの手動作成</b>と、<b style="color:var(--ink);">②`aws cloudformation deploy`によるスタック本体の作成</b>です。以下の一覧のうち、CloudFormationスタック <code>employee-portal</code> の実行結果として作られるのは11個の主要リソースだけで（各Lambdaに付随するIAMロール・実行許可は個別記載を省略）、Lambdaコード置き場バケットはCloudFormation管理外の別物です。S3コンソールを開いたときにバケットが3つ（Website用・Data用・アーティファクト用）見えるのはこのためです。</p>
+    <p class="desc"><span class="loc loc-aws">AWS</span>に作られる成果物 — <span style="color:var(--rust);font-weight:600;">① 手動作成（CloudFormation管理外）</span>:</p>
+    <ul class="resource-list">
+      <li>
+        <span class="rname">employee-portal-artifacts-018811607892 <span class="rtype">（S3 バケット）</span></span>
+        <ul>
+          <li><code>aws s3 mb</code>コマンドで手動作成。CloudFormationスタックのリソースではない</li>
+          <li>Lambdaコードのzipを一時的に置くための場所（<code>aws cloudformation package</code>がアップロード先として使う）</li>
+          <li>アプリの実行そのものには使われない。デプロイ作業のためだけのバケット</li>
+        </ul>
+      </li>
+    </ul>
+    <p class="desc"><span class="loc loc-aws">AWS</span>に作られる成果物 — <span style="color:var(--pine);font-weight:600;">② CloudFormationスタック `employee-portal` の実行結果</span>:</p>
+    <ul class="resource-list">
+      <li>
+        <span class="rname">employee-portal-EmployeeTable-* <span class="rtype">（DynamoDB テーブル）</span></span>
+        <ul>
+          <li>画面表示と変更内容の格納</li>
+          <li>社員番号をパーティションキーに、従業員1人＝1レコード</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">employee-portal-websitebucket-* <span class="rtype">（S3 バケット）</span></span>
+        <ul>
+          <li>フロントエンド一式（index.html / app.js / config.js）の格納場所</li>
+          <li>CloudFront以外からの直接アクセスは拒否（Refererヘッダー検証）</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">E1L2YU3UWBVT86 <span class="rtype">（CloudFront ディストリビューション）</span></span>
+        <ul>
+          <li>portal.tokaiec.co.jpのHTTPS配信本体。Stage3の証明書をアタッチ</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">employee-portal-data-018811607892 <span class="rtype">（S3 バケット）</span></span>
+        <ul>
+          <li>CSV取込の入口（incoming/）と出力の受け渡し場所（export/）</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">ap-northeast-1_YfKRaiSJq <span class="rtype">（Cognito ユーザープール）</span></span>
+        <ul>
+          <li>従業員のログイン認証・パスワード管理。ユーザー名＝社員番号</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">1qim8ihltqq0hjdivhpkb3800l <span class="rtype">（Cognito アプリクライアント）</span></span>
+        <ul>
+          <li>フロントエンドが使う認証クライアント（シークレットなし）</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">r16aived4j <span class="rtype">（API Gateway HTTP API）</span></span>
+        <ul>
+          <li><code>GET/PUT /me</code>のエンドポイント。CognitoのIDトークンをJWTとして検証してからLambdaへ渡す</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">employee-portal-GetEmployeeFunction-* <span class="rtype">（Lambda）</span></span>
+        <ul>
+          <li>ログイン中の本人情報を1件取得する処理</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">employee-portal-UpdateEmployeeFunction-* <span class="rtype">（Lambda）</span></span>
+        <ul>
+          <li>本人情報の更新処理と、変更日時の記録</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">employee-portal-ImportCsvFunction-* <span class="rtype">（Lambda）</span></span>
+        <ul>
+          <li>CSV取込処理。DynamoDBへの登録・更新と、未登録者のCognitoユーザー自動作成</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">employee-portal-ExportCsvFunction-* <span class="rtype">（Lambda）</span></span>
+        <ul>
+          <li>DynamoDB全件をCSVへ書き出す処理（管理者が手動実行）</li>
+        </ul>
+      </li>
+    </ul>
+    <pre class="cmd">openssl rand -hex 16  <span class="muted"># S3直アクセス遮断用の秘密値を生成して控える</span>
+
+<span class="muted"># Lambdaコードのzipを一時的に置くための専用バケットを作成（初回のみ）</span>
+aws s3 mb s3://employee-portal-artifacts-018811607892 --region ap-northeast-1
+<span class="muted"># コスト集計用にタグ付け</span>
+aws s3api put-bucket-tagging \
+  --bucket employee-portal-artifacts-018811607892 \
+  --tagging 'TagSet=[{Key=Project,Value=renrakusaki}]'
+
+<span class="muted"># src/配下の4関数をzip化してS3へアップロードし、テンプレートのCodeUriをS3参照に書き換える</span>
+aws cloudformation package \
+  --template-file template.yaml \
+  --s3-bucket employee-portal-artifacts-018811607892 \
+  --output-template-file packaged.template.yaml \
+  --region ap-northeast-1
+
+<span class="muted"># DynamoDB・Cognito・API Gateway・Lambda×4・CloudFrontをまとめて作成</span>
+aws cloudformation deploy \
+  --template-file packaged.template.yaml \
+  --stack-name employee-portal \
+  --region ap-northeast-1 \
+  --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
+  --tags Project=renrakusaki \
+  --parameter-overrides \
+    HostedZoneId=Z01829923DVUSDCOCPDUG \
+    AcmCertificateArn=arn:aws:acm:us-east-1:018811607892:certificate/34151893-6164-4a39-93ab-76aebb500048 \
+    OriginVerifySecret=&lt;生成した秘密値&gt;
+
+<span class="muted"># WebsiteBucketName・ApiUrl・UserPoolClientIdなど、Stage5以降で使う値をまとめて取得</span>
+aws cloudformation describe-stacks \
+  --stack-name employee-portal \
+  --region ap-northeast-1 --query "Stacks[0].Outputs"</pre>
+    <div class="verify">
+      <span class="eyebrow">コンソールで確認</span>
+      <dl>
+        <dt>CloudFormation</dt><dd>スタック <code>employee-portal</code> が <code>CREATE_COMPLETE</code>。「リソース」タブ（CloudFormationがこのスタックの一部として管理しているリソースだけを表示する画面）でDynamoDB・Lambda×4・Cognito×2・API Gateway・CloudFront・S3×2が揃っていること</dd>
+        <dt>S3（サービス画面で直接確認する場合）</dt><dd>CloudFormationの「リソース」タブとは異なり、S3サービスの画面はこのAWSアカウント内の全バケットを表示します。このプロジェクト関連では、CloudFormation管理下の2つ（<code>employee-portal-websitebucket-*</code>・<code>employee-portal-data-*</code>）に加えて、手動作成した<code>employee-portal-artifacts-*</code>も見えるため、合計3つになるのが正しい状態です</dd>
+        <dt>DynamoDB</dt><dd>テーブル <code>employee-portal-EmployeeTable-*</code> が作成されている（中身はまだ空）</dd>
+        <dt>CloudFront</dt><dd>ディストリビューションのステータスが「有効」→「Deployed」になるまで10〜20分待つ</dd>
+        <dt>Lambda</dt><dd>各関数の「コード」タブでソースが読めること。<code>src/</code>配下の4関数には処理の意図を説明する日本語コメントを入れてあるので、コンソール上でも読み解きやすい</dd>
+      </dl>
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="eyebrow">Stage 5</span>
+    <h2>フロントエンドの設定・公開</h2>
+    <p class="desc"><code>frontend/config.js</code>は環境ごとに値が異なるファイルのため<span class="loc loc-git">GitHub</span>のリポジトリには含めておらず（<code>.gitignore</code>で除外）、代わりに値が空のテンプレート<code>frontend/config.example.js</code>だけが入っています。そのため<span class="loc loc-git">GitHub</span>から<code>git clone</code>した直後の<span class="loc loc-local">ローカル</span>には<code>config.js</code>自体が存在しません。まずこのテンプレートをコピーして<code>config.js</code>を新規作成し、その中身をStage 4のCloudFormationの出力値（<code>employee-portal</code>スタックの「出力」タブ、または<code>aws cloudformation describe-stacks --stack-name employee-portal --query "Stacks[0].Outputs"</code>の実行結果）で書き換えたうえで、<span class="loc loc-aws">AWS</span>のS3にアップロードします。対応関係は次の通りです。</p>
+    <ul class="svc-list">
+      <li><code>config.js</code>の<code>region</code> ← Stage 4の出力値<code>Region</code></li>
+      <li><code>config.js</code>の<code>userPoolClientId</code> ← Stage 4の出力値<code>UserPoolClientId</code></li>
+      <li><code>config.js</code>の<code>apiBaseUrl</code> ← Stage 4の出力値<code>ApiUrl</code></li>
+    </ul>
+    <pre class="cmd"><span class="muted"># config.example.js をコピーして config.js を新規作成（ローカルの frontend/ 配下、初回のみ）</span>
+cp frontend/config.example.js frontend/config.js
+
+<span class="muted"># ここで frontend/config.js を上記の対応表の通りに手動編集する</span>
+
+<span class="muted"># index.html・app.js・config.jsをS3にアップロード（config.example.jsはテンプレートなので除外）</span>
+aws s3 sync frontend/ s3://employee-portal-websitebucket-m044fsfdbjza/ \
+  --region ap-northeast-1 --exclude "config.example.js"</pre>
+    <div class="verify">
+      <span class="eyebrow">コンソールで確認</span>
+      <dl>
+        <dt>S3</dt><dd><code>employee-portal-websitebucket-*</code> に <code>index.html</code> <code>app.js</code> <code>config.js</code> があること</dd>
+        <dt>ブラウザ</dt><dd><code>https://portal.tokaiec.co.jp</code> でログイン画面が表示されること</dd>
+      </dl>
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="eyebrow">Stage 6</span>
+    <h2>CSV取込の動作確認</h2>
+    <p class="desc"><b style="color:var(--ink);">アップロード先（取込）: <span class="loc loc-aws">AWS</span>S3バケット <code>employee-portal-data-018811607892</code> の <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。<b style="color:var(--ink);">出力先（エクスポート、Stage 4以降いつでも実行可能）: 同じバケットの <code>export/</code> フォルダ配下</b>（<code>ExportCsvFunction</code>を手動実行した際に生成される）。取り込む従業員一覧CSVのファイル形式は、次の通り正式に確定しています。</p>
+    <ul class="svc-list">
+      <li>ファイル名: <code>緊急連絡先.csv</code>（S3側は<code>incoming/</code>プレフィックス配下であればファイル名自体は問わない）</li>
+      <li>文字コード: UTF-8（BOM付き）。取込処理はUTF-8を優先的に試し、読めない場合のみShift-JISにフォールバックする</li>
+      <li>区切り文字: カンマ</li>
+      <li>列数: 21列</li>
+    </ul>
+    <p class="desc"><b style="color:var(--ink);">画面の項目名・並び順は、このCSVファイルの列名・列順にそのまま従うルールになっています。</b>画面側やCSV出力側でCSVの列名と異なる名前・順序を使うことはありません。列の追加・変更が必要になった場合は、CSVの列を先に確定させ、それに合わせて画面（<span class="loc loc-git">GitHub</span><code>frontend/app.js</code>）とCSV出力（<span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code>）を修正します。</p>
+    <p class="desc"><b style="color:var(--ink);">同じ社員番号が既存レコードとして存在する場合の取込ルール:</b> 削除ではなく上書きです。CSVの値をそのまま（空欄・スペースも含めて）採用し、既存レコードの同じ列を置き換えます。<b style="color:var(--rust);">列が空欄の場合は、既存の値を空文字で上書きするため、見た目上はその項目を削除したのと同じ結果になります</b>（意図的な仕様です）。CSVに列そのものが存在しない属性（「変更日時」など）だけは、既存の値がそのまま残ります。</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>列名</th></tr></thead>
+        <tbody>
+          <tr><td class="id">1</td><td class="name">社員番号（主キー）</td></tr>
+          <tr><td class="id">2</td><td class="name">氏名</td></tr>
+          <tr><td class="id">3</td><td class="name">生年月日</td></tr>
+          <tr><td class="id">4</td><td class="name">郵便番号</td></tr>
+          <tr><td class="id">5</td><td class="name">都道府県</td></tr>
+          <tr><td class="id">6</td><td class="name">市区町村</td></tr>
+          <tr><td class="id">7</td><td class="name">番地</td></tr>
+          <tr><td class="id">8</td><td class="name">建物</td></tr>
+          <tr><td class="id">9</td><td class="name">電話番号</td></tr>
+          <tr><td class="id">10</td><td class="name">メールアドレス</td></tr>
+          <tr><td class="id">11</td><td class="name">LINE ID</td></tr>
+          <tr><td class="id">12</td><td class="name">氏名(緊急連絡先1)</td></tr>
+          <tr><td class="id">13</td><td class="name">フリガナ(緊急連絡先1)</td></tr>
+          <tr><td class="id">14</td><td class="name">続柄(緊急連絡先1)</td></tr>
+          <tr><td class="id">15</td><td class="name">電話番号(緊急連絡先1)</td></tr>
+          <tr><td class="id">16</td><td class="name">メールアドレス(緊急連絡先1)</td></tr>
+          <tr><td class="id">17</td><td class="name">氏名(緊急連絡先2)</td></tr>
+          <tr><td class="id">18</td><td class="name">フリガナ(緊急連絡先2)</td></tr>
+          <tr><td class="id">19</td><td class="name">続柄(緊急連絡先2)</td></tr>
+          <tr><td class="id">20</td><td class="name">電話番号(緊急連絡先2)</td></tr>
+          <tr><td class="id">21</td><td class="name">メールアドレス(緊急連絡先2)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <pre class="cmd"><span class="muted"># incoming/へのアップロード自体がImportCsvFunction起動のトリガーになる</span>
+aws s3 cp 緊急連絡先.csv \
+  s3://employee-portal-data-018811607892/incoming/緊急連絡先.csv \
+  --region ap-northeast-1</pre>
+    <div class="verify">
+      <span class="eyebrow">コンソールで確認</span>
+      <dl>
+        <dt>DynamoDB</dt><dd><code>employee-portal-EmployeeTable-*</code> の「項目を探索」に社員番号のレコードが追加されている</dd>
+        <dt>Cognito</dt><dd><code>ap-northeast-1_YfKRaiSJq</code> のユーザー一覧に社員番号と同じユーザー名が作成され、ステータスが「確認済み」</dd>
+        <dt>CloudWatch Logs</dt><dd><code>/aws/lambda/employee-portal-ImportCsvFunction-*</code> に実行ログが出ていること</dd>
+      </dl>
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="eyebrow">Stage 7</span>
+    <h2>運用中の差分更新（画面文言・項目追加など）</h2>
+    <p class="desc">リソース構成が変わらない小さな変更（フォームの文言・項目追加、Lambdaのロジック修正など）は、Stage 4のフルデプロイをやり直す必要はありません。<span class="loc loc-local">ローカル</span>の<code>frontend/</code>（<code>contact_info/frontend/</code>）を編集して<code>aws s3 sync</code>で<span class="loc loc-aws">AWS</span>のS3へ直接上書きし、Lambda単体は<span class="loc loc-local">ローカル</span>の<code>src/</code>配下（<code>contact_info/src/</code>）を編集して<code>aws lambda update-function-code</code>でコードだけ差し替えます。IAM権限や環境変数など<code>template.yaml</code>自体を変える場合のみStage 4を再実行してください。<code>src/</code>配下の4つのLambda関数には処理の意図を説明する日本語コメントを入れているので、コード自体を読んで理解する際はそちらも参照してください（<span class="loc loc-git">GitHub</span>上でも同じ内容が読めます）。</p>
+    <pre class="cmd"><span class="muted"># フロントエンド（frontend/ 配下を編集後）</span>
+<span class="muted"># 変更したファイルだけS3上書き（差分アップロード）</span>
+aws s3 sync frontend/ s3://employee-portal-websitebucket-m044fsfdbjza/ \
+  --region ap-northeast-1 --exclude "config.example.js"
+
+<span class="muted"># S3を更新しただけではCloudFrontのキャッシュが古いまま残るため、明示的に無効化する</span>
+aws cloudfront create-invalidation \
+  --distribution-id E1L2YU3UWBVT86 \
+  --paths "/index.html" "/app.js" \
+  --region ap-northeast-1
+
+<span class="muted"># Lambda単体（例: src/update_employee/app.py を編集後）</span>
+<span class="muted"># 対象の.pyファイル1つだけをzip化</span>
+Compress-Archive -Path src/update_employee/app.py `
+  -DestinationPath src/update_employee/function.zip -Force
+
+<span class="muted"># コードだけを差し替える。IAMロールや環境変数、他のリソースには触れない</span>
+aws lambda update-function-code \
+  --function-name employee-portal-UpdateEmployeeFunction-5kEjCvzvmpGO \
+  --zip-file fileb://src/update_employee/function.zip \
+  --region ap-northeast-1</pre>
+    <div class="verify">
+      <span class="eyebrow">コンソールで確認</span>
+      <dl>
+        <dt>S3</dt><dd><code>employee-portal-websitebucket-*</code> の該当ファイルの「最終更新日」が更新されていること</dd>
+        <dt>CloudFront</dt><dd>「無効化」タブで作成した無効化が「完了」になっていること（数分かかる）</dd>
+        <dt>Lambda</dt><dd>該当関数の「コード」タブの最終更新時刻が変わっていること</dd>
+      </dl>
+    </div>
+  </li>
+
+</ol>
+
+<div class="footnote">
+  出てくるID・ARNはすべて現在稼働中の環境の実値です。別環境で新規に手を動かす場合は、Stage 1・3・4のOutputsをその都度読み替えてください。CSV出力（<code>ExportCsvFunction</code>の手動実行）の手順は <a href="https://claude.ai/code/artifact/0b7ab018-7eab-4e94-840e-9f64e6dd1987">構成台帳</a> のFigure 2を参照してください。
+</div>
+
+</div>
