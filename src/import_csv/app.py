@@ -91,13 +91,16 @@ def handler(event, context):
             if not employee_id:
                 continue  # 社員番号が空の行（空行など）はスキップ
 
-            # CSVの列名をそのままDynamoDBの属性名として保存する（列名の変換・マッピングをしない設計）
-            item = {k: (v if v is not None else "") for k, v in row.items() if k}
+            # CSVの列名をそのままDynamoDBの属性名として保存する（列名の変換・マッピングをしない設計）。
+            # 値が空欄（NULL）の列は意図的にここで除外する。既存レコードを上書きする際、
+            # 空欄の列でDynamoDB側の値を空文字に消してしまわないようにするため
+            # （空欄の列は「今回のCSVでは触れない」という扱いにする運用ルール）。
+            item = {k: v for k, v in row.items() if k and v}
             item[PK_ATTRIBUTE_NAME] = employee_id
 
-            # 既存レコードにCSVへ無い属性（例: 本人がWeb画面で保存した際の「変更日時」）があれば、
-            # そのまま引き継ぐ。put_itemはItemの内容で完全に上書きするため、ここでマージしておかないと
-            # CSV再取込のたびに「変更日時」等のシステム管理項目が消えてしまう。
+            # 既存レコードと、今回のCSV行（空欄列を除いたもの）をマージする。
+            # 既存にしかない属性（変更日時など）や、今回のCSVで空欄になっている列は
+            # 既存の値がそのまま残り、今回のCSVに値がある列だけが上書きされる。
             existing = table.get_item(Key={PK_ATTRIBUTE_NAME: employee_id}).get("Item") or {}
             merged_item = {**existing, **item}
             table.put_item(Item=merged_item)  # 同じ社員番号が既にあれば上書き（アップサート）
