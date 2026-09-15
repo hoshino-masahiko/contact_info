@@ -52,7 +52,7 @@ def _ensure_cognito_user(employee_id, birth_date):
 
 def handler(event, context):
     """S3の incoming/ プレフィックスへのアップロードをトリガーに自動実行される。
-    アップロードされたCSV（Shift-JIS、タブまたはカンマ区切り）を読み込み、
+    アップロードされたCSV（UTF-8またはShift-JIS、タブまたはカンマ区切り、いずれも自動判定）を読み込み、
     行ごとにDynamoDBへ登録・更新し、必要ならCognitoユーザーも作成する。
     """
     created_users = []
@@ -64,9 +64,15 @@ def handler(event, context):
         key = urllib.parse.unquote_plus(record["s3"]["object"]["key"])  # S3キーはURLエンコードされて渡ってくる
 
         obj = s3.get_object(Bucket=bucket, Key=key)
-        # 社内のExcel/レガシーシステムが出力するCSVはShift-JIS（cp932）が一般的なため、
-        # UTF-8ではなくcp932でデコードする。
-        text = obj["Body"].read().decode("cp932")
+        raw = obj["Body"].read()
+        # 文字コードを自動判定する。UTF-8（BOM付き含む）を優先的に試し、
+        # UTF-8として解釈できない場合はShift-JIS（cp932、Excelの旧来のCSV保存形式）として読む。
+        # UTF-8はバイト列の構造上「たまたま偶然デコードに成功してしまう」誤検出が起きにくいため、
+        # 先にUTF-8を試す順番にしている。
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = raw.decode("cp932")
 
         # 区切り文字（タブ or カンマ）をファイルの先頭部分から自動判定し、どちらの形式でも取り込めるようにする
         sample = text[:2048]
