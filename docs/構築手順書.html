@@ -216,7 +216,7 @@
   <span class="eyebrow">Runbook &middot; ap-northeast-1</span>
   <h1>緊急連絡先登録ポータル構築手順書</h1>
   <p>今回の環境をゼロから作る場合の、実行コマンドと「コンソールでどこを見れば確認できるか」をステージ順に並べたものです。すでに稼働中の環境（下記IDはすべて実在の値）をコンソールで辿って答え合わせする使い方もできます。</p>
-  <p class="backlink">構成の全体像・用語の説明は <a href="https://claude.ai/code/artifact/0b7ab018-7eab-4e94-840e-9f64e6dd1987">従業員ポータル構成台帳</a> を参照してください。</p>
+  <p class="backlink">構成の全体像・用語の説明は <a href="https://claude.ai/artifact/2RDVZY5g2fxJGVqJCTnvUn">従業員ポータル構成台帳</a> を参照してください。</p>
 </header>
 
 <div class="callout">
@@ -524,7 +524,7 @@ aws s3 sync frontend/ s3://employee-portal-websitebucket-m044fsfdbjza/ \
       <li>区切り文字: カンマ</li>
       <li>列数: 21列</li>
     </ul>
-    <p class="desc"><b style="color:var(--ink);">画面の項目名・並び順は、このCSVファイルの列名・列順にそのまま従うルールになっています。</b>画面側やCSV出力側でCSVの列名と異なる名前・順序を使うことはありません。列の追加・変更が必要になった場合は、CSVの列を先に確定させ、それに合わせて画面（<span class="loc loc-git">GitHub</span><code>frontend/app.js</code>）とCSV出力（<span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code>）を修正します。</p>
+    <p class="desc"><b style="color:var(--ink);">画面の項目名・並び順は、このCSVファイルの列名・列順にそのまま従うルールになっています。</b>画面側やExcel出力側でCSVの列名と異なる名前・順序を使うことはありません。列の追加・変更が必要になった場合は、CSVの列を先に確定させ、それに合わせて画面（<span class="loc loc-git">GitHub</span><code>frontend/app.js</code>）とExcel出力（<span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code>）を修正します。</p>
     <p class="desc"><b style="color:var(--ink);">同じ社員番号が既存レコードとして存在する場合の取込ルール:</b> 削除ではなく上書きです。CSVの値をそのまま（空欄・スペースも含めて）採用し、既存レコードの同じ列を置き換えます。<b style="color:var(--rust);">列が空欄の場合は、既存の値を空文字で上書きするため、見た目上はその項目を削除したのと同じ結果になります</b>（意図的な仕様です）。CSVに列そのものが存在しない属性（「変更日時」など）だけは、既存の値がそのまま残ります。</p>
     <div class="table-wrap">
       <table>
@@ -570,8 +570,8 @@ aws s3 cp 緊急連絡先.csv \
 
   <li class="step">
     <span class="eyebrow">Stage 7</span>
-    <h2>CSV出力の動作確認</h2>
-    <p class="desc"><b style="color:var(--ink);">出力先: <span class="loc loc-aws">AWS</span>S3バケット <code>employee-renrakusaki-data</code> の <code>export/</code> フォルダ配下</b>。Stage 4以降いつでも実行できます。取込のようなS3イベントによる自動トリガーはなく、管理者が<code>employee-renrakusaki-ExportCsv</code>関数を手動実行するたびに、その時点のDynamoDB全件をCSVとして書き出します。出力ファイル名は <code>employee-renrakusaki_YYYYMMDD_HHMMSS.csv</code>、形式はStage 6の取込CSVと同じカンマ区切り・UTF-8（BOM付き）・21列なので、そのままExcelで開けますし、そのまま再取込にも使えます。</p>
+    <h2>Excel出力の動作確認</h2>
+    <p class="desc"><b style="color:var(--ink);">出力先: <span class="loc loc-aws">AWS</span>S3バケット <code>employee-renrakusaki-data</code> の <code>export/</code> フォルダ配下</b>。Stage 4以降いつでも実行できます。取込のようなS3イベントによる自動トリガーはなく、管理者が<code>employee-renrakusaki-ExportCsv</code>関数を手動実行するたびに、その時点のDynamoDB全件をExcelブック（<code>.xlsx</code>）として書き出します。出力ファイル名は <code>employee-renrakusaki_YYYYMMDD_HHMMSS.xlsx</code>、21列すべてを文字列（セル書式「文字列」）として書き込むため、番地（例: 20-6）や電話番号（先頭の0）などもExcelで直接ダブルクリックで開いた時点でWEBに入力された内容のまま表示されます（CSVで出力していた頃は、Excelが列の値を日付や数値だと自動判定して見た目を変換してしまう問題がありました）。取込用CSVとは別形式のため、出力したファイルをそのまま<code>incoming/</code>へ再アップロードして再取込することはできません。</p>
 
     <h3 style="font-family:'Fraunces',serif;font-size:1rem;color:var(--ink);margin:20px 0 8px;">操作方法（コンソール）</h3>
     <ol style="margin:0 0 14px;padding-left:20px;">
@@ -579,8 +579,8 @@ aws s3 cp 緊急連絡先.csv \
       <li>関数一覧から <code>employee-renrakusaki-ExportCsv</code> を選択</li>
       <li>上部の <b>「テスト」</b> タブを開く</li>
       <li>イベントJSONは空の <code>{}</code> のままで、右上の <b>「テスト」</b> ボタンをクリックして実行</li>
-      <li><b>S3</b> サービスを開き、<code>employee-renrakusaki-data</code> バケットの <code>export/</code> フォルダを見ると、実行時刻を含む新しいCSVファイルが生成されている</li>
-      <li>そのファイルを選択して「ダウンロード」</li>
+      <li><b>S3</b> サービスを開き、<code>employee-renrakusaki-data</code> バケットの <code>export/</code> フォルダを見ると、実行時刻を含む新しいExcelファイル（<code>.xlsx</code>）が生成されている</li>
+      <li>そのファイルを選択して「ダウンロード」→ ダブルクリックしてExcelで開く</li>
     </ol>
 
     <h3 style="font-family:'Fraunces',serif;font-size:1rem;color:var(--ink);margin:20px 0 8px;">操作方法（CLI）</h3>
@@ -591,14 +591,14 @@ aws lambda invoke \
   /dev/stdout
 
 <span class="muted"># 上のkeyの値を使ってダウンロード（例）</span>
-aws s3 cp s3://employee-renrakusaki-data/export/employee-renrakusaki_20260917_145932.csv \
-  ./employee-renrakusaki_export.csv \
+aws s3 cp s3://employee-renrakusaki-data/export/employee-renrakusaki_20260917_154006.xlsx \
+  ./employee-renrakusaki_export.xlsx \
   --region ap-northeast-1</pre>
     <div class="verify">
       <span class="eyebrow">コンソールで確認</span>
       <dl>
-        <dt>S3</dt><dd><code>employee-renrakusaki-data</code> バケットの <code>export/</code> フォルダに新しいCSVファイルが生成されていること</dd>
-        <dt>ファイルの中身</dt><dd>ダウンロードしてExcelで開き、21列がカンマで正しく分割されて表示され、DynamoDBの現在の全件数と行数が一致していること</dd>
+        <dt>S3</dt><dd><code>employee-renrakusaki-data</code> バケットの <code>export/</code> フォルダに新しいExcelファイル（<code>.xlsx</code>）が生成されていること</dd>
+        <dt>ファイルの中身</dt><dd>ダウンロードしてExcelで開き、21列が正しく分割されて表示され、番地や電話番号（先頭の0を含む）がWEBに入力した内容のまま（日付や数値に変換されずに）表示されること。DynamoDBの現在の全件数と行数が一致していること</dd>
         <dt>CloudWatch Logs</dt><dd><code>/aws/lambda/employee-renrakusaki-ExportCsv</code> に実行ログ（出力先キー・件数）が出ていること</dd>
       </dl>
     </div>
@@ -629,6 +629,7 @@ aws lambda update-function-code \
   --function-name employee-portal-UpdateEmployeeFunction-5kEjCvzvmpGO \
   --zip-file fileb://src/update_employee/function.zip \
   --region ap-northeast-1</pre>
+    <p class="desc" style="margin-top:14px;"><b style="color:var(--rust);">注意（ExportCsvFunctionのみ）:</b> <code>src/export_csv/</code>にはExcel出力に使う<code>openpyxl</code>ライブラリ本体（<code>app.py</code>と同じ階層の<code>openpyxl/</code>・<code>et_xmlfile/</code>フォルダ）を同梱しています。この関数だけは上記のように<code>app.py</code>単体をzip化すると本体ライブラリが欠落し動作しなくなるため、<code>src/export_csv/</code>フォルダ全体をzip化してから<code>update-function-code</code>を実行してください。</p>
     <div class="verify">
       <span class="eyebrow">コンソールで確認</span>
       <dl>
@@ -642,7 +643,7 @@ aws lambda update-function-code \
 </ol>
 
 <div class="footnote">
-  出てくるID・ARNはすべて現在稼働中の環境の実値です。別環境で新規に手を動かす場合は、Stage 1・3・4のOutputsをその都度読み替えてください。CSV出力（<code>employee-renrakusaki-ExportCsv</code>の手動実行）の操作方法はStage 7を参照してください。全体の流れの図解は <a href="https://claude.ai/code/artifact/0b7ab018-7eab-4e94-840e-9f64e6dd1987">構成台帳</a> のFigure 2を参照してください。
+  出てくるID・ARNはすべて現在稼働中の環境の実値です。別環境で新規に手を動かす場合は、Stage 1・3・4のOutputsをその都度読み替えてください。Excel出力（<code>employee-renrakusaki-ExportCsv</code>の手動実行）の操作方法はStage 7を参照してください。全体の流れの図解は <a href="https://claude.ai/artifact/2RDVZY5g2fxJGVqJCTnvUn">構成台帳</a> のFigure 2を参照してください。
 </div>
 
 </div>

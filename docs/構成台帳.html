@@ -298,9 +298,9 @@
 
 <section>
   <span class="eyebrow">Figure 2</span>
-  <h2>CSV取込・出力の経路</h2>
+  <h2>CSV取込・Excel出力の経路</h2>
   <p>取込は<b style="color:var(--pine)">S3イベントで自動起動</b>、出力は<b style="color:var(--rust)">管理者がLambdaコンソールで手動実行</b>という非対称な設計です。</p>
-  <p><b style="color:var(--ink);">CSVのアップロード先（取込）: <code>employee-renrakusaki-data</code> バケットの <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。このアップロードがそのまま取込処理の起動トリガーになります。<b style="color:var(--ink);">CSVの出力先（エクスポート）: 同じバケットの <code>export/</code> フォルダ配下</b>（管理者がExportCsvFunctionを手動実行した際に生成される）。出力ファイルはカンマ区切り・UTF-8（BOM付き）で、取込用CSVと同じ形式（そのままExcelで開ける・そのまま再取込できる）。</p>
+  <p><b style="color:var(--ink);">CSVのアップロード先（取込）: <code>employee-renrakusaki-data</code> バケットの <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。このアップロードがそのまま取込処理の起動トリガーになります。<b style="color:var(--ink);">Excelの出力先（エクスポート）: 同じバケットの <code>export/</code> フォルダ配下</b>（管理者がExportCsvFunctionを手動実行した際に生成される）。出力ファイルはExcelブック（<code>.xlsx</code>）形式で、全セルを文字列書式で書き込むため、番地（例: 20-6）や電話番号（先頭の0）などがExcelで直接開いてもWEBに入力した内容のまま表示される。取込用CSVとは別形式のため、出力したファイルをそのまま<code>incoming/</code>へ再アップロードして再取込することはできない。</p>
 
   <figure>
     <svg viewBox="0 0 980 430" role="img" aria-label="管理者がS3のincomingフォルダにCSVをアップロードすると自動でImportCsvFunctionが起動しDynamoDBとCognitoを更新する。出力は管理者がExportCsvFunctionを手動実行し、DynamoDBを全件スキャンしてexportフォルダにCSVを書き出し、管理者がダウンロードする">
@@ -362,7 +362,7 @@
       <line x1="220" y1="315" x2="155" y2="315" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow2)"/>
       <text x="185" y="305" text-anchor="middle" font-size="9.5" fill="var(--steel)">⑦ DL</text>
     </svg>
-    <figcaption><b>取込は自動、出力は手動。</b>①〜③がCSV取込（S3アップロードが引き金）、④〜⑦がCSV出力（管理者がLambdaを都度実行）の流れです。</figcaption>
+    <figcaption><b>取込は自動、出力は手動。</b>①〜③がCSV取込（S3アップロードが引き金）、④〜⑦がExcel出力（管理者がLambdaを都度実行）の流れです。</figcaption>
   </figure>
 
   <div class="legend">
@@ -400,7 +400,7 @@
         <tr><td class="id">19</td><td class="name">続柄(緊急連絡先2)</td><td>CSV列19</td><td></td></tr>
         <tr><td class="id">20</td><td class="name">電話番号(緊急連絡先2)</td><td>CSV列20</td><td></td></tr>
         <tr><td class="id">21</td><td class="name">メールアドレス(緊急連絡先2)</td><td>CSV列21</td><td></td></tr>
-        <tr><td class="id">22</td><td class="name">変更日時</td><td>システム自動生成</td><td style="color:var(--rust);">CSVに対応列なし。<code>PUT /me</code>成功のたびに<code>UpdateEmployeeFunction</code>がJSTで上書き記録（<code>YYYY-MM-DD HH:MM</code>）。画面のログアウトボタン横にのみ表示し、CSV出力には含まれない</td></tr>
+        <tr><td class="id">22</td><td class="name">変更日時</td><td>システム自動生成</td><td style="color:var(--rust);">CSVに対応列なし。<code>PUT /me</code>成功のたびに<code>UpdateEmployeeFunction</code>がJSTで上書き記録（<code>YYYY-MM-DD HH:MM</code>）。画面のログアウトボタン横にのみ表示し、Excel出力には含まれない</td></tr>
       </tbody>
     </table>
   </div>
@@ -445,7 +445,7 @@
         <tr><td class="name">GetEmployeeFunction</td><td class="id">employee-portal-GetEmployeeFunction-ftrbXrEekmm5</td><td>Lambda</td><td>本人情報の取得</td></tr>
         <tr><td class="name">UpdateEmployeeFunction</td><td class="id">employee-portal-UpdateEmployeeFunction-5kEjCvzvmpGO</td><td>Lambda</td><td>本人情報の更新（即時反映・承認フローなし）</td></tr>
         <tr><td class="name">ImportCsvFunction</td><td class="id">employee-portal-ImportCsvFunction-8JwsS2yj5ks9</td><td>Lambda</td><td>CSV取込。DataBucketのS3イベントで自動起動</td></tr>
-        <tr><td class="name">ExportCsvFunction</td><td class="id">employee-renrakusaki-ExportCsv</td><td>Lambda</td><td>CSV出力。管理者がコンソールで手動実行</td></tr>
+        <tr><td class="name">ExportCsvFunction</td><td class="id">employee-renrakusaki-ExportCsv</td><td>Lambda</td><td>Excel（.xlsx）出力。管理者がコンソールで手動実行</td></tr>
 
         <tr class="group-row"><td colspan="4">データ</td></tr>
         <tr><td class="name">DynamoDB EmployeeTable</td><td class="id">employee-portal-EmployeeTable-5GLOF22GE1RV</td><td>DynamoDB</td><td>PK=社員番号。属性名は元CSVの列名（日本語）をそのまま使用。保存の都度「変更日時」を上書き記録</td></tr>
@@ -469,6 +469,7 @@
     <li><b>属性名がそのまま日本語:</b> DynamoDBの属性名・CSVの列見出しはどちらも同じ日本語（社員番号・氏名…）。取込・出力のロジックが列名を仲介せずそのまま使えるようにするための設計です。</li>
     <li><b>CSV取込時の文字コード:</b> UTF-8（BOM付き含む）を優先的に試し、UTF-8として読めない場合はShift-JIS（cp932）にフォールバックする自動判定。取込元がExcelでもモダンなシステム由来でも、どちらの保存形式でも取り込める。</li>
     <li><b>CSV取込時の上書きルール:</b> 同じ社員番号が既存レコードとして存在する場合、CSVの値をそのまま（空欄・スペースも含めて）上書きする。空欄の列は既存の値を空文字で上書きするため、見た目上は「その項目を削除した」のと同じ結果になる（意図的な仕様）。CSVに列そのものが存在しない属性（「変更日時」など）だけは、既存の値を引き継ぐ。</li>
+    <li><b>Excel出力用ライブラリの同梱:</b> <code>openpyxl</code>（及び依存する<code>et_xmlfile</code>）は標準のPythonには含まれないため、<span class="loc loc-git">GitHub</span><span class="loc loc-local">ローカル</span>の<code>src/export_csv/</code>配下に<code>app.py</code>と一緒にライブラリ本体を同梱（<code>pip install --target</code>で配置）している。どちらも純粋なPythonコードのみで環境依存のビルドを含まないため、この方式で配置してそのままzip化するだけでLambda（Python 3.12）上で動作する。<code>src/export_csv/</code>だけをapp.py単体で差し替えるとライブラリが欠落し動作しなくなる点に注意。</li>
   </ul>
 </section>
 
@@ -496,7 +497,7 @@
   <p>任意です。S3イベントのトリガー条件は <code>incoming/</code> という<b style="color:var(--ink)">プレフィックス（フォルダ）のみ</b>で、ファイル名は判定していません。<code>incoming/</code>配下であればファイル名は何でも取込が起動します。</p>
 
   <h3 style="margin-top:32px;">列（項目）を追加できるか</h3>
-  <p>CSV取込とAPIは列名をハードコードしていないため、新しい列を追加してもそのままDynamoDBに保存されます。ただしWebフォームとCSV出力は列の一覧をコードに持っているため、そこまで反映するには小さな修正が必要です。</p>
+  <p>CSV取込とAPIは列名をハードコードしていないため、新しい列を追加してもそのままDynamoDBに保存されます。ただしWebフォームとExcel出力は列の一覧をコードに持っているため、そこまで反映するには小さな修正が必要です。</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>処理</th><th>列名の扱い</th></tr></thead>
@@ -504,21 +505,21 @@
         <tr><td class="name">CSV取込 → DynamoDB</td><td>ヘッダー行の列名をそのまま属性名として使用。<b style="color:var(--pine)">新しい列があっても無改修で保存される</b></td></tr>
         <tr><td class="name">閲覧・編集API（GET/PUT /me）</td><td>DynamoDBの中身をそのまま返す/書く。<b style="color:var(--pine)">無改修で通る</b></td></tr>
         <tr><td class="name">Webフォーム（<span class="loc loc-git">GitHub</span><code>frontend/app.js</code>）</td><td>表示する列の一覧がコードに直書き。<b style="color:var(--rust)">画面に出すにはここへ追記が必要</b></td></tr>
-        <tr><td class="name">CSV出力（<span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code>）</td><td>出力する列の一覧がコードに直書き。<b style="color:var(--rust)">出力に含めるにはここへ追記が必要</b></td></tr>
+        <tr><td class="name">Excel出力（<span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code>）</td><td>出力する列の一覧がコードに直書き。<b style="color:var(--rust)">出力に含めるにはここへ追記が必要</b></td></tr>
       </tbody>
     </table>
   </div>
   <p style="margin-top:14px;">例: 緊急連絡先に住所列を追加する場合 — ①CSVに列を追加してアップロード（保存は無改修で完了）→ ②画面で見せたいなら<code>frontend/app.js</code>のフィールド一覧に追記 → ③出力にも含めたいなら<code>src/export_csv/app.py</code>のHEADERに追記（いずれもリポジトリルート基準のパス）。</p>
 
   <h3 style="margin-top:32px;">画面の項目の並び順ルール</h3>
-  <p>DynamoDBは属性（map）に決まった並び順を持たないスキーマレスなドキュメントストアです。コンソールで見える順序は実装依存で、保証された仕様ではありません。画面・CSV取込・CSV出力はそれぞれ<b style="color:var(--ink)">別々の順序定義</b>を持っており、DynamoDB内部の並びとは無関係です。</p>
+  <p>DynamoDBは属性（map）に決まった並び順を持たないスキーマレスなドキュメントストアです。コンソールで見える順序は実装依存で、保証された仕様ではありません。画面・CSV取込・Excel出力はそれぞれ<b style="color:var(--ink)">別々の順序定義</b>を持っており、DynamoDB内部の並びとは無関係です。</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>順序</th><th>決めているもの</th></tr></thead>
       <tbody>
         <tr><td class="name">画面の表示順</td><td><span class="loc loc-git">GitHub</span><code>frontend/app.js</code> の <code>FIELD_GROUPS</code> 配列（唯一の正）</td></tr>
         <tr><td class="name">CSV取込時の列</td><td><span class="loc loc-local">ローカル</span>アップロードするCSVファイルのヘッダー行そのもの</td></tr>
-        <tr><td class="name">CSV出力時の列順</td><td><span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code> の <code>HEADER</code> 定数</td></tr>
+        <tr><td class="name">Excel出力時の列順</td><td><span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code> の <code>HEADER</code> 定数</td></tr>
         <tr><td class="name">DynamoDB内部の並び</td><td>保証なし（スキーマレスのため、コンソール表示順が変わることもある）</td></tr>
       </tbody>
     </table>
@@ -535,6 +536,7 @@
     <li><b>CSVフォーマットの正式確定:</b> 取り込むCSVを21列（Data Dictionary参照）の正式フォーマットとして確定。画面の項目名・並び順はこのCSVの列名・列順にそのまま従う（詳細はFollow-upの「画面の項目の並び順ルール」）。取込処理（<span class="loc loc-git">GitHub</span><code>src/import_csv/app.py</code>）は列名を決め打ちしない設計のため無改修、画面（<span class="loc loc-git">GitHub</span><code>frontend/app.js</code>）とCSV出力（<span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code>）は列名に合わせて改修。あわせて文字コードをUTF-8（BOM付き）優先・Shift-JISへの自動フォールバックに変更。</li>
     <li><b>変更日時の記録・表示:</b> <code>UpdateEmployeeFunction</code>が保存の都度「変更日時」属性（JST・年月日時分、例: <code>2026-09-09 15:49</code>）をサーバー側で上書き記録（クライアントからの入力では変更不可）。画面はログアウトボタンの右隣に表示。</li>
     <li><b>保存メッセージの表示位置:</b> 「登録しました」等のメッセージを画面上部から、ボタン直下（画面最下部）に移動。ボタン押下後にスクロールなしで見えるようにするための変更。ログイン時のエラーメッセージは引き続き画面上部に表示。</li>
+    <li><b>出力形式をCSVからExcel（.xlsx）へ変更:</b> CSV出力では、番地（例: 20-6）や電話番号（先頭の0）などの値が、ファイルの中身自体は正しいにもかかわらず、Excelで直接開いた際に日付や数値だと自動判定され見た目が変換されてしまう問題があった。xlsxはセルごとに型（文字列）を明示できるため、<span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code>を全列「文字列」書式で書き込む方式に変更し解消。出力ファイル名の拡張子も<code>.xlsx</code>に変更（例: <code>employee-renrakusaki_20260917_154006.xlsx</code>）。この変更は出力（エクスポート）側のみで、取込（インポート）用CSVフォーマットに変更はない。出力したxlsxファイルは（CSVとは別形式のため）そのまま<code>incoming/</code>への再取込には使えない。</li>
   </ul>
 </section>
 

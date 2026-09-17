@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   Employee information portal (S3 static hosting + API Gateway + Lambda + DynamoDB + Cognito).
-  CSV import (keyed by employee number) / self-service view & edit / CSV export (manual, by an admin).
+  CSV import (keyed by employee number) / self-service view & edit / Excel (.xlsx) export (manual, by an admin).
   NOTE: this template's comments/descriptions are kept ASCII-only, and the two Japanese
   attribute-name literals below are written as XXXX escapes, because the AWS CLI on the
   deploying Windows machine fails to read non-ASCII template files (system codepage issue).
@@ -127,7 +127,7 @@ Resources:
         HostedZoneId: Z2FDTNDATAQYW2
 
   # --------------------------------------------------------------------
-  # S3: bucket for CSV import/export (upload under incoming/ to trigger import)
+  # S3: bucket for CSV import / Excel export (upload under incoming/ to trigger import)
   # --------------------------------------------------------------------
   DataBucket:
     Type: AWS::S3::Bucket
@@ -279,7 +279,7 @@ Resources:
                     Value: incoming/
 
   # --------------------------------------------------------------------
-  # Lambda: CSV export (run manually by an admin via `aws lambda invoke`)
+  # Lambda: Excel (.xlsx) export (run manually by an admin via `aws lambda invoke`)
   # --------------------------------------------------------------------
   ExportCsvFunction:
     Type: AWS::Serverless::Function
@@ -310,7 +310,7 @@ Outputs:
     Description: Bucket to upload the frontend to
     Value: !Ref WebsiteBucket
   DataBucketName:
-    Description: Bucket for CSV import/export (upload CSVs under incoming/)
+    Description: Bucket for CSV import / Excel export (upload CSVs under incoming/)
     Value: !Ref DataBucket
   ApiUrl:
     Description: API Gateway endpoint

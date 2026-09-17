@@ -1,7 +1,7 @@
 # 従業員情報ポータル
 
 CSVで従業員一覧を取り込み、従業員が自分の情報をWebで閲覧・編集し、DynamoDBに登録。
-管理者は後日CSVとして出力できます。HTTPS化のため独自ドメイン（`portal.tokaiec.co.jp`）をCloudFront経由で配信します。
+管理者は後日Excel（`.xlsx`）として出力できます。HTTPS化のため独自ドメイン（`portal.tokaiec.co.jp`）をCloudFront経由で配信します。
 
 ## 構成
 
@@ -11,7 +11,7 @@ CSVで従業員一覧を取り込み、従業員が自分の情報をWebで閲�
 - API: API Gateway (HTTP API) + Lambda（Python 3.12）
 - DB: DynamoDB（PK = `社員番号`）
 - CSV取込: 管理者がS3の `incoming/` にアップロード → S3イベントでLambda起動 → DynamoDBへ登録 + 新規社員のCognitoユーザーを自動作成
-- CSV出力: 管理者がLambdaを手動実行 → S3の `export/` にCSVを生成
+- Excel出力: 管理者がLambdaを手動実行 → S3の `export/` にExcelブック（`.xlsx`）を生成
 
 > `tokaiec.co.jp` 本体のDNSゾーンはさくらインターネット側で管理されたままです。今回はサブドメイン `portal.tokaiec.co.jp` だけをRoute53に委任するので、メール等の既存レコードには影響しません。
 
@@ -180,17 +180,19 @@ aws s3 cp "連絡先.txt" s3://<DataBucketName>/incoming/employees.csv
 1. `PortalURL`（`https://portal.tokaiec.co.jp`）にアクセスし、社員番号 + パスワード（社員番号+生年月日）でログイン
 2. 自分の情報が表示されるので、変更があれば編集して「登録する」を押すとDynamoDBに反映されます（承認フローなし・即時反映）
 
-## CSV出力（管理者が手動実行）
+## Excel出力（管理者が手動実行）
 
 ```bash
-aws lambda invoke --function-name <ExportCsvFunction名> /dev/stdout
+aws lambda invoke --function-name employee-renrakusaki-ExportCsv /dev/stdout
 ```
 
-DynamoDBの全件をタブ区切り・Shift-JISのCSVとして `s3://<DataBucketName>/export/employees_<日時>.csv` に出力します。ダウンロードは以下の通りです。
+DynamoDBの全件をExcelブック（`.xlsx`）として `s3://<DataBucketName>/export/employee-renrakusaki_<日時>.xlsx` に出力します。全列を文字列（セル書式「文字列」）で書き込むため、番地（例: 20-6）や電話番号（先頭の0）などもExcelで直接開いた時点でWEBに入力された内容のまま表示されます（CSVで出力していた頃は、Excelが列の値を日付や数値だと自動判定して見た目を変換してしまう問題がありました）。取込用CSVとは別形式のため、出力したファイルをそのまま`incoming/`へ再アップロードして再取込することはできません。
 
 ```bash
-aws s3 cp s3://<DataBucketName>/export/employees_20260101_120000.csv ./employees_export.csv
+aws s3 cp s3://<DataBucketName>/export/employee-renrakusaki_20260917_154006.xlsx ./employee-renrakusaki_export.xlsx
 ```
+
+`src/export_csv/` には`app.py`と一緒に依存ライブラリ`openpyxl`（および`et_xmlfile`）本体を同梱しています（`aws cloudformation package`はcodeUriディレクトリをそのままzip化するだけで`pip install`は行わないため）。この関数のコードだけを差し替える場合は、`app.py`単体ではなく`src/export_csv/`フォルダ全体をzip化してください。
 
 ## 運用上の注意（このまま本番利用する場合の検討事項）
 

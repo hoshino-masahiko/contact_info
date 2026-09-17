@@ -1,15 +1,15 @@
-import csv
 import io
 import os
 from datetime import datetime, timedelta, timezone
 
 import boto3
+from openpyxl import Workbook
 
 TABLE_NAME = os.environ["TABLE_NAME"]
 PK_ATTRIBUTE_NAME = os.environ["PK_ATTRIBUTE_NAME"]
 DATA_BUCKET = os.environ["DATA_BUCKET"]
 
-# 出力するCSVの列名・列順。DynamoDB内部の属性順（決まった並びを持たない）とは無関係に、
+# 出力するExcelブックの列名・列順。DynamoDB内部の属性順（決まった並びを持たない）とは無関係に、
 # ここで定義した通りの順番で出力される。取込時のCSVの並びと合わせてある。
 # 新しい列を追加する場合はここにも追記しないと出力に含まれない（フロントエンドのFIELD_GROUPSと同様）。
 HEADER = [
@@ -20,6 +20,8 @@ HEADER = [
 ]
 
 JST = timezone(timedelta(hours=9))  # 出力ファイル名のタイムスタンプを日本時間にするため
+
+XLSX_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(TABLE_NAME)
@@ -43,27 +45,32 @@ def _scan_all_items():
 
 def handler(event, context):
     """管理者がLambdaコンソール等から手動実行する。S3イベントのような自動トリガーは設定していない。
-    DynamoDBの全件をCSVに書き出し、S3のexport/配下に保存する。
+    DynamoDBの全件をExcelブック（.xlsx）に書き出し、S3のexport/配下に保存する。
     """
     items = _scan_all_items()
 
-    # カンマ区切り・CRLF改行で出力する（正式に確定した取込用CSVと同じ形式に合わせる。
-    # 拡張子.csvはカンマ区切りが前提のため、タブ区切りにするとExcelで開いた際に
-    # 列が分割されず1列にまとまってしまう）
-    buffer = io.StringIO()
-    writer = csv.writer(buffer, delimiter=",", lineterminator="\r\n")
-    writer.writerow(HEADER)
-    # 社員番号順に並べ替えてから出力（DynamoDBのScan結果は順序を保証しないため）
-    for item in sorted(items, key=lambda i: i.get(PK_ATTRIBUTE_NAME, "")):
-        writer.writerow([item.get(col, "") for col in HEADER])
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(HEADER)
 
-    # 取込側と同じくUTF-8（BOM付き）で書き出す。BOMがあることでExcelがロケールに関わらず
-    # UTF-8だと確実に認識できる。これにより出力したCSVをそのまま再取込しても文字コードが揺れない。
-    csv_bytes = buffer.getvalue().encode("utf-8-sig")
+    # 全セルを文字列（セル書式「文字列」）として書き込む。CSVで出力していた頃は、
+    # 番地（例: 20-6）や電話番号（先頭の0）をExcelがファイルを開いた時点で
+    # 日付や数値だと自動判定し、見た目を変換してしまっていた。xlsxはセルごとに
+    # 型を明示できるため、文字列として保存すればExcelで直接開いてもWEBに
+    # 入力された内容がそのまま表示される。
+    for item in sorted(items, key=lambda i: i.get(PK_ATTRIBUTE_NAME, "")):
+        values = [str(item.get(col, "")) for col in HEADER]
+        sheet.append(values)
+        for cell in sheet[sheet.max_row]:
+            cell.number_format = "@"
+
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    xlsx_bytes = buffer.getvalue()
 
     timestamp = datetime.now(JST).strftime("%Y%m%d_%H%M%S")
-    key = f"export/employee-renrakusaki_{timestamp}.csv"
-    s3.put_object(Bucket=DATA_BUCKET, Key=key, Body=csv_bytes, ContentType="text/csv")
+    key = f"export/employee-renrakusaki_{timestamp}.xlsx"
+    s3.put_object(Bucket=DATA_BUCKET, Key=key, Body=xlsx_bytes, ContentType=XLSX_CONTENT_TYPE)
 
     print(f"出力完了: s3://{DATA_BUCKET}/{key} ({len(items)}件)")
     return {"bucket": DATA_BUCKET, "key": key, "count": len(items)}
