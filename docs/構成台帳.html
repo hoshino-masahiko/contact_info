@@ -197,7 +197,7 @@
 <header class="hero">
   <span class="eyebrow">Infrastructure Reference &middot; ap-northeast-1</span>
   <h1>緊急連絡先登録ポータル 構成台帳</h1>
-  <p>CSVで取り込んだ従業員情報を、本人がWebで閲覧・編集し、DynamoDBに即時反映。管理者は任意のタイミングでCSVに書き戻せる、S3静的配信+API Gateway+Lambda+DynamoDB+Cognitoによるサーバーレス構成です。</p>
+  <p>CSVで取り込んだ従業員情報を、本人がWebで閲覧・編集し、DynamoDBに即時反映。管理者は任意のタイミングでExcel（.xlsx）に書き出せる、S3静的配信+API Gateway+Lambda+DynamoDB+Cognitoによるサーバーレス構成です。</p>
   <div class="meta-row">
     <span>アカウント <b class="mono">018811607892</b></span>
     <span>リージョン <b class="mono">ap-northeast-1</b>（証明書のみ <b class="mono">us-east-1</b>）</span>
@@ -303,7 +303,7 @@
   <p><b style="color:var(--ink);">CSVのアップロード先（取込）: <code>employee-renrakusaki-data</code> バケットの <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。このアップロードがそのまま取込処理の起動トリガーになります。<b style="color:var(--ink);">Excelの出力先（エクスポート）: 同じバケットの <code>export/</code> フォルダ配下</b>（管理者がExportCsvFunctionを手動実行した際に生成される）。出力ファイルはExcelブック（<code>.xlsx</code>）形式で、全セルを文字列書式で書き込むため、番地（例: 20-6）や電話番号（先頭の0）などがExcelで直接開いてもWEBに入力した内容のまま表示される。取込用CSVとは別形式のため、出力したファイルをそのまま<code>incoming/</code>へ再アップロードして再取込することはできない。</p>
 
   <figure>
-    <svg viewBox="0 0 980 430" role="img" aria-label="管理者がS3のincomingフォルダにCSVをアップロードすると自動でImportCsvFunctionが起動しDynamoDBとCognitoを更新する。出力は管理者がExportCsvFunctionを手動実行し、DynamoDBを全件スキャンしてexportフォルダにCSVを書き出し、管理者がダウンロードする">
+    <svg viewBox="0 0 980 430" role="img" aria-label="管理者がS3のincomingフォルダにCSVをアップロードすると自動でImportCsvFunctionが起動しDynamoDBとCognitoを更新する。出力は管理者がExportCsvFunctionを手動実行し、DynamoDBを全件スキャンしてexportフォルダにExcelファイル(.xlsx)を書き出し、管理者がダウンロードする">
       <defs>
         <marker id="arrow2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
@@ -357,7 +357,7 @@
       <text x="745" y="300" text-anchor="middle" font-size="10" fill="var(--steel)">⑤ 全件スキャン</text>
 
       <line x1="475" y1="335" x2="415" y2="300" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow2)"/>
-      <text x="470" y="308" text-anchor="middle" font-size="9.5" fill="var(--steel)">⑥ 書出し</text>
+      <text x="470" y="308" text-anchor="middle" font-size="9.5" fill="var(--steel)">⑥ 書出し(.xlsx)</text>
 
       <line x1="220" y1="315" x2="155" y2="315" stroke="currentColor" stroke-width="1.4" marker-end="url(#arrow2)"/>
       <text x="185" y="305" text-anchor="middle" font-size="9.5" fill="var(--steel)">⑦ DL</text>
