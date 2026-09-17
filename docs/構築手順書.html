@@ -396,7 +396,7 @@ aws cloudformation describe-stacks \
         </ul>
       </li>
       <li>
-        <span class="rname">employee-portal-data-018811607892 <span class="rtype">（S3 バケット）</span></span>
+        <span class="rname">employee-renrakusaki-data <span class="rtype">（S3 バケット）</span></span>
         <ul>
           <li>CSV取込の入口（incoming/）と出力の受け渡し場所（export/）</li>
         </ul>
@@ -517,7 +517,7 @@ aws s3 sync frontend/ s3://employee-portal-websitebucket-m044fsfdbjza/ \
   <li class="step">
     <span class="eyebrow">Stage 6</span>
     <h2>CSV取込の動作確認</h2>
-    <p class="desc"><b style="color:var(--ink);">アップロード先（取込）: <span class="loc loc-aws">AWS</span>S3バケット <code>employee-portal-data-018811607892</code> の <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。<b style="color:var(--ink);">出力先（エクスポート、Stage 4以降いつでも実行可能）: 同じバケットの <code>export/</code> フォルダ配下</b>（<code>ExportCsvFunction</code>を手動実行した際に生成される）。出力されるCSVは、下記の取込フォーマットと同じカンマ区切り・UTF-8（BOM付き）・21列で、そのままExcelで開ける。取り込む従業員一覧CSVのファイル形式は、次の通り正式に確定しています。</p>
+    <p class="desc"><b style="color:var(--ink);">アップロード先: <span class="loc loc-aws">AWS</span>S3バケット <code>employee-renrakusaki-data</code> の <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。取り込む従業員一覧CSVのファイル形式は、次の通り正式に確定しています。</p>
     <ul class="svc-list">
       <li>ファイル名: <code>緊急連絡先.csv</code>（S3側は<code>incoming/</code>プレフィックス配下であればファイル名自体は問わない）</li>
       <li>文字コード: UTF-8（BOM付き）。取込処理はUTF-8を優先的に試し、読めない場合のみShift-JISにフォールバックする</li>
@@ -556,7 +556,7 @@ aws s3 sync frontend/ s3://employee-portal-websitebucket-m044fsfdbjza/ \
     </div>
     <pre class="cmd"><span class="muted"># incoming/へのアップロード自体がImportCsvFunction起動のトリガーになる</span>
 aws s3 cp 緊急連絡先.csv \
-  s3://employee-portal-data-018811607892/incoming/緊急連絡先.csv \
+  s3://employee-renrakusaki-data/incoming/緊急連絡先.csv \
   --region ap-northeast-1</pre>
     <div class="verify">
       <span class="eyebrow">コンソールで確認</span>
@@ -570,6 +570,42 @@ aws s3 cp 緊急連絡先.csv \
 
   <li class="step">
     <span class="eyebrow">Stage 7</span>
+    <h2>CSV出力の動作確認</h2>
+    <p class="desc"><b style="color:var(--ink);">出力先: <span class="loc loc-aws">AWS</span>S3バケット <code>employee-renrakusaki-data</code> の <code>export/</code> フォルダ配下</b>。Stage 4以降いつでも実行できます。取込のようなS3イベントによる自動トリガーはなく、管理者が<code>employee-renrakusaki-ExportCsv</code>関数を手動実行するたびに、その時点のDynamoDB全件をCSVとして書き出します。出力ファイル名は <code>employee-renrakusaki_YYYYMMDD_HHMMSS.csv</code>、形式はStage 6の取込CSVと同じカンマ区切り・UTF-8（BOM付き）・21列なので、そのままExcelで開けますし、そのまま再取込にも使えます。</p>
+
+    <h3 style="font-family:'Fraunces',serif;font-size:1rem;color:var(--ink);margin:20px 0 8px;">操作方法（コンソール）</h3>
+    <ol style="margin:0 0 14px;padding-left:20px;">
+      <li>AWSマネジメントコンソールで <b>Lambda</b> を開く（リージョン: ap-northeast-1 東京）</li>
+      <li>関数一覧から <code>employee-renrakusaki-ExportCsv</code> を選択</li>
+      <li>上部の <b>「テスト」</b> タブを開く</li>
+      <li>イベントJSONは空の <code>{}</code> のままで、右上の <b>「テスト」</b> ボタンをクリックして実行</li>
+      <li><b>S3</b> サービスを開き、<code>employee-renrakusaki-data</code> バケットの <code>export/</code> フォルダを見ると、実行時刻を含む新しいCSVファイルが生成されている</li>
+      <li>そのファイルを選択して「ダウンロード」</li>
+    </ol>
+
+    <h3 style="font-family:'Fraunces',serif;font-size:1rem;color:var(--ink);margin:20px 0 8px;">操作方法（CLI）</h3>
+    <pre class="cmd"><span class="muted"># 手動実行。生成されたS3キー（bucket/key）が結果として返ってくる</span>
+aws lambda invoke \
+  --function-name employee-renrakusaki-ExportCsv \
+  --region ap-northeast-1 \
+  /dev/stdout
+
+<span class="muted"># 上のkeyの値を使ってダウンロード（例）</span>
+aws s3 cp s3://employee-renrakusaki-data/export/employee-renrakusaki_20260917_145932.csv \
+  ./employee-renrakusaki_export.csv \
+  --region ap-northeast-1</pre>
+    <div class="verify">
+      <span class="eyebrow">コンソールで確認</span>
+      <dl>
+        <dt>S3</dt><dd><code>employee-renrakusaki-data</code> バケットの <code>export/</code> フォルダに新しいCSVファイルが生成されていること</dd>
+        <dt>ファイルの中身</dt><dd>ダウンロードしてExcelで開き、21列がカンマで正しく分割されて表示され、DynamoDBの現在の全件数と行数が一致していること</dd>
+        <dt>CloudWatch Logs</dt><dd><code>/aws/lambda/employee-renrakusaki-ExportCsv</code> に実行ログ（出力先キー・件数）が出ていること</dd>
+      </dl>
+    </div>
+  </li>
+
+  <li class="step">
+    <span class="eyebrow">Stage 8</span>
     <h2>運用中の差分更新（画面文言・項目追加など）</h2>
     <p class="desc">リソース構成が変わらない小さな変更（フォームの文言・項目追加、Lambdaのロジック修正など）は、Stage 4のフルデプロイをやり直す必要はありません。<span class="loc loc-local">ローカル</span>の<code>frontend/</code>（<code>contact_info/frontend/</code>）を編集して<code>aws s3 sync</code>で<span class="loc loc-aws">AWS</span>のS3へ直接上書きし、Lambda単体は<span class="loc loc-local">ローカル</span>の<code>src/</code>配下（<code>contact_info/src/</code>）を編集して<code>aws lambda update-function-code</code>でコードだけ差し替えます。IAM権限や環境変数など<code>template.yaml</code>自体を変える場合のみStage 4を再実行してください。<code>src/</code>配下の4つのLambda関数には処理の意図を説明する日本語コメントを入れているので、コード自体を読んで理解する際はそちらも参照してください（<span class="loc loc-git">GitHub</span>上でも同じ内容が読めます）。</p>
     <pre class="cmd"><span class="muted"># フロントエンド（frontend/ 配下を編集後）</span>
@@ -606,7 +642,7 @@ aws lambda update-function-code \
 </ol>
 
 <div class="footnote">
-  出てくるID・ARNはすべて現在稼働中の環境の実値です。別環境で新規に手を動かす場合は、Stage 1・3・4のOutputsをその都度読み替えてください。CSV出力（<code>ExportCsvFunction</code>の手動実行）の手順は <a href="https://claude.ai/code/artifact/0b7ab018-7eab-4e94-840e-9f64e6dd1987">構成台帳</a> のFigure 2を参照してください。
+  出てくるID・ARNはすべて現在稼働中の環境の実値です。別環境で新規に手を動かす場合は、Stage 1・3・4のOutputsをその都度読み替えてください。CSV出力（<code>employee-renrakusaki-ExportCsv</code>の手動実行）の操作方法はStage 7を参照してください。全体の流れの図解は <a href="https://claude.ai/code/artifact/0b7ab018-7eab-4e94-840e-9f64e6dd1987">構成台帳</a> のFigure 2を参照してください。
 </div>
 
 </div>
