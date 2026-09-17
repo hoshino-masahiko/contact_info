@@ -1,4 +1,3 @@
-<meta charset="utf-8" />
 <title>緊急連絡先登録ポータル構成台帳</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -301,7 +300,7 @@
   <span class="eyebrow">Figure 2</span>
   <h2>CSV取込・出力の経路</h2>
   <p>取込は<b style="color:var(--pine)">S3イベントで自動起動</b>、出力は<b style="color:var(--rust)">管理者がLambdaコンソールで手動実行</b>という非対称な設計です。</p>
-  <p><b style="color:var(--ink);">CSVのアップロード先（取込）: <code>employee-portal-data-018811607892</code> バケットの <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。このアップロードがそのまま取込処理の起動トリガーになります。<b style="color:var(--ink);">CSVの出力先（エクスポート）: 同じバケットの <code>export/</code> フォルダ配下</b>（管理者がExportCsvFunctionを手動実行した際に生成される）。</p>
+  <p><b style="color:var(--ink);">CSVのアップロード先（取込）: <code>employee-portal-data-018811607892</code> バケットの <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。このアップロードがそのまま取込処理の起動トリガーになります。<b style="color:var(--ink);">CSVの出力先（エクスポート）: 同じバケットの <code>export/</code> フォルダ配下</b>（管理者がExportCsvFunctionを手動実行した際に生成される）。出力ファイルはカンマ区切り・UTF-8（BOM付き）で、取込用CSVと同じ形式（そのままExcelで開ける・そのまま再取込できる）。</p>
 
   <figure>
     <svg viewBox="0 0 980 430" role="img" aria-label="管理者がS3のincomingフォルダにCSVをアップロードすると自動でImportCsvFunctionが起動しDynamoDBとCognitoを更新する。出力は管理者がExportCsvFunctionを手動実行し、DynamoDBを全件スキャンしてexportフォルダにCSVを書き出し、管理者がダウンロードする">

@@ -1,4 +1,3 @@
-<meta charset="utf-8" />
 <title>緊急連絡先登録ポータル構築手順書</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -518,7 +517,7 @@ aws s3 sync frontend/ s3://employee-portal-websitebucket-m044fsfdbjza/ \
   <li class="step">
     <span class="eyebrow">Stage 6</span>
     <h2>CSV取込の動作確認</h2>
-    <p class="desc"><b style="color:var(--ink);">アップロード先（取込）: <span class="loc loc-aws">AWS</span>S3バケット <code>employee-portal-data-018811607892</code> の <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。<b style="color:var(--ink);">出力先（エクスポート、Stage 4以降いつでも実行可能）: 同じバケットの <code>export/</code> フォルダ配下</b>（<code>ExportCsvFunction</code>を手動実行した際に生成される）。取り込む従業員一覧CSVのファイル形式は、次の通り正式に確定しています。</p>
+    <p class="desc"><b style="color:var(--ink);">アップロード先（取込）: <span class="loc loc-aws">AWS</span>S3バケット <code>employee-portal-data-018811607892</code> の <code>incoming/</code> フォルダ配下</b>（ファイル名は任意）。<b style="color:var(--ink);">出力先（エクスポート、Stage 4以降いつでも実行可能）: 同じバケットの <code>export/</code> フォルダ配下</b>（<code>ExportCsvFunction</code>を手動実行した際に生成される）。出力されるCSVは、下記の取込フォーマットと同じカンマ区切り・UTF-8（BOM付き）・21列で、そのままExcelで開ける。取り込む従業員一覧CSVのファイル形式は、次の通り正式に確定しています。</p>
     <ul class="svc-list">
       <li>ファイル名: <code>緊急連絡先.csv</code>（S3側は<code>incoming/</code>プレフィックス配下であればファイル名自体は問わない）</li>
       <li>文字コード: UTF-8（BOM付き）。取込処理はUTF-8を優先的に試し、読めない場合のみShift-JISにフォールバックする</li>
