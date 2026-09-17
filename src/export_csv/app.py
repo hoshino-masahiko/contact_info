@@ -62,7 +62,7 @@ def handler(event, context):
     csv_bytes = buffer.getvalue().encode("utf-8-sig")
 
     timestamp = datetime.now(JST).strftime("%Y%m%d_%H%M%S")
-    key = f"export/employees_{timestamp}.csv"
+    key = f"export/employee-renrakusaki_{timestamp}.csv"
     s3.put_object(Bucket=DATA_BUCKET, Key=key, Body=csv_bytes, ContentType="text/csv")
 
     print(f"出力完了: s3://{DATA_BUCKET}/{key} ({len(items)}件)")

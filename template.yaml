@@ -136,7 +136,7 @@ Resources:
       # reference it as a plain string. Using !Ref DataBucket in those policies would add
       # a Role -> Bucket dependency edge that, combined with the S3 event notification's
       # Bucket -> Function edge, forms a circular dependency CloudFormation rejects.
-      BucketName: !Sub "${AWS::StackName}-data-${AWS::AccountId}"
+      BucketName: employee-renrakusaki-data
 
   # --------------------------------------------------------------------
   # Cognito: user pool for employee auth (username = employee number)
@@ -258,7 +258,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref EmployeeTable
         - S3ReadPolicy:
-            BucketName: !Sub "${AWS::StackName}-data-${AWS::AccountId}"
+            BucketName: employee-renrakusaki-data
         - Statement:
             - Effect: Allow
               Action:
@@ -284,6 +284,7 @@ Resources:
   ExportCsvFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName: employee-renrakusaki-ExportCsv
       CodeUri: src/export_csv/
       Handler: app.handler
       Timeout: 60
@@ -291,12 +292,12 @@ Resources:
         Variables:
           TABLE_NAME: !Ref EmployeeTable
           PK_ATTRIBUTE_NAME: "\u793E\u54E1\u756A\u53F7"
-          DATA_BUCKET: !Sub "${AWS::StackName}-data-${AWS::AccountId}"
+          DATA_BUCKET: employee-renrakusaki-data
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref EmployeeTable
         - S3WritePolicy:
-            BucketName: !Sub "${AWS::StackName}-data-${AWS::AccountId}"
+            BucketName: employee-renrakusaki-data
 
 Outputs:
   PortalURL:
