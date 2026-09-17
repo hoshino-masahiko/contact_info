@@ -47,16 +47,19 @@ def handler(event, context):
     """
     items = _scan_all_items()
 
-    # タブ区切り・CRLF改行で、取込元のCSVと同じ形式に合わせて出力する
+    # カンマ区切り・CRLF改行で出力する（正式に確定した取込用CSVと同じ形式に合わせる。
+    # 拡張子.csvはカンマ区切りが前提のため、タブ区切りにするとExcelで開いた際に
+    # 列が分割されず1列にまとまってしまう）
     buffer = io.StringIO()
-    writer = csv.writer(buffer, delimiter="\t", lineterminator="\r\n")
+    writer = csv.writer(buffer, delimiter=",", lineterminator="\r\n")
     writer.writerow(HEADER)
     # 社員番号順に並べ替えてから出力（DynamoDBのScan結果は順序を保証しないため）
     for item in sorted(items, key=lambda i: i.get(PK_ATTRIBUTE_NAME, "")):
         writer.writerow([item.get(col, "") for col in HEADER])
 
-    # 取込側と同じくShift-JIS（cp932）で書き出す。変換できない文字は落とさず「?」等に置換する。
-    csv_bytes = buffer.getvalue().encode("cp932", errors="replace")
+    # 取込側と同じくUTF-8（BOM付き）で書き出す。BOMがあることでExcelがロケールに関わらず
+    # UTF-8だと確実に認識できる。これにより出力したCSVをそのまま再取込しても文字コードが揺れない。
+    csv_bytes = buffer.getvalue().encode("utf-8-sig")
 
     timestamp = datetime.now(JST).strftime("%Y%m%d_%H%M%S")
     key = f"export/employees_{timestamp}.csv"
