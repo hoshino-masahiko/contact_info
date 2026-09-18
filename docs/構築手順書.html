@@ -621,6 +621,7 @@ aws s3 cp s3://employee-renrakusaki-data/export/employee-renrakusaki_20260917_15
   <li class="step">
     <span class="eyebrow">Stage 8</span>
     <h2>変更履歴の動作確認</h2>
+    <p class="desc"><b style="color:var(--ink);">採用サービス: <span class="loc loc-aws">AWS</span>DynamoDB Streams（変更検知）+ AWS Lambda（RecordHistoryFunction）+ DynamoDB（EmployeeHistoryTable、保存先）</b>。CloudTrailやCloudWatch Logsのような汎用ログサービスではなく、この3つの組み合わせで「誰が・いつ・何を変更したか」をアプリ独自のテーブルに記録する構成。</p>
     <p class="desc"><b style="color:var(--ink);">保存先: <span class="loc loc-aws">AWS</span>DynamoDB <code>employee-portal-EmployeeHistoryTable-*</code></b>。Stage 6（CSV取込）・従業員本人によるWeb編集のどちらでも、EmployeeTableへの書き込みのたびに自動でRecordHistoryFunctionが起動し、変更前後の内容を記録する。手動実行や有効化の操作は不要（Stage 4のデプロイで自動的に有効になっている）。</p>
 
     <h3 style="font-family:'Fraunces',serif;font-size:1rem;color:var(--ink);margin:20px 0 8px;">操作方法（CLI・社員番号ごとに照会）</h3>
