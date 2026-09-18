@@ -10,6 +10,7 @@ TABLE_NAME = os.environ["TABLE_NAME"]
 PK_ATTRIBUTE_NAME = os.environ["PK_ATTRIBUTE_NAME"]  # CSVヘッダーのうちどの列を主キー（社員番号）とみなすか
 BIRTH_DATE_ATTRIBUTE_NAME = os.environ["BIRTH_DATE_ATTRIBUTE_NAME"]  # 初期パスワード生成に使う生年月日列
 USER_POOL_ID = os.environ["USER_POOL_ID"]
+ACTOR_ATTRIBUTE_NAME = "最終更新元"  # 変更履歴(EmployeeHistoryTable)が「誰が書いたか」を判別するためのマーカー
 
 s3 = boto3.client("s3")
 dynamodb = boto3.resource("dynamodb")
@@ -102,6 +103,9 @@ def handler(event, context):
             # 今回のCSVの内容で必ず上書きする。
             existing = table.get_item(Key={PK_ATTRIBUTE_NAME: employee_id}).get("Item") or {}
             merged_item = {**existing, **item}
+            # この書き込みが「CSV取込」であることを記録する(RecordHistoryFunctionが履歴に使う)。
+            # CSVに同名の列があっても(データとしては採用しつつ)ここで必ず上書きし、なりすませないようにする。
+            merged_item[ACTOR_ATTRIBUTE_NAME] = "CSV取込"
             table.put_item(Item=merged_item)  # 同じ社員番号が既にあれば上書き（アップサート）
             row_count += 1
 

@@ -12,6 +12,7 @@ CSVで従業員一覧を取り込み、従業員が自分の情報をWebで閲�
 - DB: DynamoDB（PK = `社員番号`）
 - CSV取込: 管理者がS3の `incoming/` にアップロード → S3イベントでLambda起動 → DynamoDBへ登録 + 新規社員のCognitoユーザーを自動作成
 - Excel出力: 管理者がLambdaを手動実行 → S3の `export/` にExcelブック（`.xlsx`）を生成
+- 変更履歴: DynamoDB Streamsで登録・更新のたびに自動記録（誰が・いつ・何を変更したか）
 
 > `tokaiec.co.jp` 本体のDNSゾーンはさくらインターネット側で管理されたままです。今回はサブドメイン `portal.tokaiec.co.jp` だけをRoute53に委任するので、メール等の既存レコードには影響しません。
 
@@ -194,8 +195,30 @@ aws s3 cp s3://<DataBucketName>/export/employee-renrakusaki_20260917_154006.xlsx
 
 `src/export_csv/` には`app.py`と一緒に依存ライブラリ`openpyxl`（および`et_xmlfile`）本体を同梱しています（`aws cloudformation package`はcodeUriディレクトリをそのままzip化するだけで`pip install`は行わないため）。この関数のコードだけを差し替える場合は、`app.py`単体ではなく`src/export_csv/`フォルダ全体をzip化してください。
 
+## 変更履歴（誰が・いつ・何を変更したか）
+
+`EmployeeTable`への書き込み（本人によるWeb編集・CSV取込のどちらも）は、DynamoDB Streams経由で`RecordHistoryFunction`が自動的に検知し、`EmployeeHistoryTable`（PK=`社員番号`、SK=`変更ID`）へ1件ずつ記録します。承認フローと違い、この記録は自動・事後参照専用で、書き込み自体を止めたり差し戻したりはしません。
+
+- **変更元**: `Web(本人)`（本人がポータルで保存した場合）または`CSV取込`（管理者がCSVをアップロードした場合）
+- **変更内容**: 変更前・変更後の値を項目ごとに記録（変化がなかった項目は含まれない）
+- **操作種別**: `新規登録`（初回登録時）または`更新`
+
+閲覧は管理者がDynamoDBコンソールの「項目を探索」、または以下のようにCLIで社員番号ごとに照会します。
+
+```bash
+aws dynamodb query \
+  --table-name <HistoryTableNameの値> \
+  --key-condition-expression "#pk = :v" \
+  --expression-attribute-names '{"#pk":"社員番号"}' \
+  --expression-attribute-values '{":v":{"S":"467"}}' \
+  --region ap-northeast-1
+```
+
+閲覧（`GET /me`）操作は対象外です（誰がいつ見たかは記録していません）。
+
 ## 運用上の注意（このまま本番利用する場合の検討事項）
 
 - **S3直アクセス制限**: 対応済みです。CloudFrontが秘密のRefererヘッダー（`OriginVerifySecret`）を付けてS3へ転送し、S3バケットポリシーはそのヘッダーを持つリクエストのみ許可します。`WebsiteURL`（S3直URL・HTTP）に直接アクセスするとAccess Deniedになります。
 - **初期パスワードの配布**: 社員番号と生年月日から機械的に決まるため配布作業は不要ですが、推測可能な値である点を踏まえ、社外に公開しない運用（社内ネットワーク限定の告知など）を推奨します。
-- **監査ログ**: 現在は変更履歴を保持していません。誰がいつ何を変更したかを残したい場合は、更新時にDynamoDB Streamsで履歴テーブルに書き出す構成を追加できます。
+- **監査ログ**: 対応済みです（上記「変更履歴」参照）。ただし閲覧（GET）操作までは記録していません。
+- **【重要・既知の不具合】新規Lambdaリソースの日本語環境変数が文字化けすることがある**: デプロイ元のWindows端末のコードページ問題により、`template.yaml`内の`\uXXXX`エスケープが、**新規に作成するLambda関数の環境変数**に対してだけ正しく解決されず、文字化けした値で作成されてしまう事象を確認しています（2026-09-18、`RecordHistoryFunction`追加時に発覚。DynamoDBテーブルの属性名や、既存Lambda関数の環境変数は影響を受けませんでした）。今後、日本語の環境変数を持つ新しいLambda関数を追加する際は、デプロイ後に必ず`aws lambda get-function-configuration`の結果をboto3等（aws-cliの`--output text`はこのマシンでは信用できないため）で確認し、文字化けしていないか検証してください。`RecordHistoryFunction`自体は、この問題を回避するため環境変数に依存せず実行時にDynamoDB Streamsのイベントから属性名を直接読み取る設計にしてあります。

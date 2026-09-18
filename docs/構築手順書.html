@@ -232,7 +232,7 @@
     <li>依存関係の順番に沿って、各リソースに対応するAWSサービスのAPIを直接呼び出す（例: DynamoDBならDynamoDBのAPI、LambdaならLambdaのAPI）</li>
     <li>全リソースの作成が完了したらスタックが<code>CREATE_COMPLETE</code>になる。途中で失敗したら自動でロールバックする</li>
   </ol>
-  <p class="note">ここにLambdaが介在する工程はありません。Stage 4で作られる4つのLambda関数（Get/UpdateEmployeeFunction・Import/ExportCsvFunction）は、この処理の<b style="color:var(--ink)">結果として作られる成果物</b>であり、デプロイを実行する側ではありません。デプロイが終わったあと、従業員がログインしたりCSVをアップロードしたりした時に初めて動き出します。</p>
+  <p class="note">ここにLambdaが介在する工程はありません。Stage 4で作られる5つのLambda関数（Get/UpdateEmployeeFunction・Import/ExportCsvFunction・RecordHistoryFunction）は、この処理の<b style="color:var(--ink)">結果として作られる成果物</b>であり、デプロイを実行する側ではありません。デプロイが終わったあと、従業員がログインしたりCSVをアップロードしたりした時に初めて動き出します。</p>
 </div>
 
 <div class="legend-box">
@@ -380,6 +380,14 @@ aws cloudformation describe-stacks \
         <ul>
           <li>画面表示と変更内容の格納</li>
           <li>社員番号をパーティションキーに、従業員1人＝1レコード</li>
+          <li>DynamoDB Streams有効（NEW_AND_OLD_IMAGES）。RecordHistoryFunctionが変更履歴の記録に使う</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">employee-portal-EmployeeHistoryTable-* <span class="rtype">（DynamoDB テーブル）</span></span>
+        <ul>
+          <li>変更履歴の格納。社員番号をパーティションキー、変更IDをソートキーに、1回の書き込み＝1レコード</li>
+          <li>RecordHistoryFunctionだけが書き込む。人が直接書き込むことはない</li>
         </ul>
       </li>
       <li>
@@ -441,6 +449,12 @@ aws cloudformation describe-stacks \
         <span class="rname">employee-renrakusaki-ExportCsv <span class="rtype">（Lambda）</span></span>
         <ul>
           <li>DynamoDB全件をExcel（.xlsx）へ書き出す処理（管理者が手動実行）</li>
+        </ul>
+      </li>
+      <li>
+        <span class="rname">employee-portal-RecordHistoryFunction-* <span class="rtype">（Lambda）</span></span>
+        <ul>
+          <li>変更履歴の記録処理。EmployeeTableのDynamoDB Streamsで自動起動し、EmployeeHistoryTableへ書き込む</li>
         </ul>
       </li>
     </ul>
@@ -606,8 +620,33 @@ aws s3 cp s3://employee-renrakusaki-data/export/employee-renrakusaki_20260917_15
 
   <li class="step">
     <span class="eyebrow">Stage 8</span>
+    <h2>変更履歴の動作確認</h2>
+    <p class="desc"><b style="color:var(--ink);">保存先: <span class="loc loc-aws">AWS</span>DynamoDB <code>employee-portal-EmployeeHistoryTable-*</code></b>。Stage 6（CSV取込）・従業員本人によるWeb編集のどちらでも、EmployeeTableへの書き込みのたびに自動でRecordHistoryFunctionが起動し、変更前後の内容を記録する。手動実行や有効化の操作は不要（Stage 4のデプロイで自動的に有効になっている）。</p>
+
+    <h3 style="font-family:'Fraunces',serif;font-size:1rem;color:var(--ink);margin:20px 0 8px;">操作方法（CLI・社員番号ごとに照会）</h3>
+    <pre class="cmd"><span class="muted"># 社員番号467の変更履歴を、古い順に照会する</span>
+aws dynamodb query \
+  --table-name employee-portal-EmployeeHistoryTable-DJ87M1OUMG73 \
+  --key-condition-expression "#pk = :v" \
+  --expression-attribute-names "{\"#pk\":\"社員番号\"}" \
+  --expression-attribute-values "{\":v\":{\"S\":\"467\"}}" \
+  --region ap-northeast-1</pre>
+    <p class="desc" style="margin-top:-6px;">各レコードの主な属性: <code>操作種別</code>（新規登録／更新）・<code>変更元</code>（<code>Web(本人)</code> または <code>CSV取込</code>）・<code>変更日時</code>・<code>変更内容</code>（変更のあった項目だけを変更前後の値でJSON文字列化したもの）。</p>
+    <div class="verify">
+      <span class="eyebrow">コンソールで確認</span>
+      <dl>
+        <dt>DynamoDB</dt><dd><code>employee-portal-EmployeeHistoryTable-*</code>の「項目を探索」で、Stage 6・Stage 7で行った操作に対応する履歴が社員番号ごとに追加されていること</dd>
+        <dt>変更元</dt><dd>CSV取込（Stage 6）の直後は<code>変更元</code>が<code>CSV取込</code>、Web画面からの保存の直後は<code>Web(本人)</code>になっていること</dd>
+        <dt>CloudWatch Logs</dt><dd><code>/aws/lambda/employee-portal-RecordHistoryFunction-*</code> にエラーが出ていないこと</dd>
+      </dl>
+    </div>
+    <p class="desc" style="margin-top:14px;color:var(--rust);"><b>既知の注意点:</b> RecordHistoryFunctionはパーティションキー名を環境変数に持たず、DynamoDB Streamsのイベントから実行時に直接読み取る設計にしている（2026-09-18のこの関数の新規追加時に、デプロイ元Windows端末のコードページ問題で、新規作成するLambda関数の日本語環境変数だけが文字化けする事象が発覚したため、詳細は<a href="https://claude.ai/artifact/2RDVZY5g2fxJGVqJCTnvUn">構成台帳</a>のDesign Notes参照）。今後、日本語の環境変数を持つ新規Lambda関数を追加する場合は、デプロイ後に<code>aws lambda get-function-configuration</code>の結果をboto3等で必ず検証すること。</p>
+  </li>
+
+  <li class="step">
+    <span class="eyebrow">Stage 9</span>
     <h2>運用中の差分更新（画面文言・項目追加など）</h2>
-    <p class="desc">リソース構成が変わらない小さな変更（フォームの文言・項目追加、Lambdaのロジック修正など）は、Stage 4のフルデプロイをやり直す必要はありません。<span class="loc loc-local">ローカル</span>の<code>frontend/</code>（<code>contact_info/frontend/</code>）を編集して<code>aws s3 sync</code>で<span class="loc loc-aws">AWS</span>のS3へ直接上書きし、Lambda単体は<span class="loc loc-local">ローカル</span>の<code>src/</code>配下（<code>contact_info/src/</code>）を編集して<code>aws lambda update-function-code</code>でコードだけ差し替えます。IAM権限や環境変数など<code>template.yaml</code>自体を変える場合のみStage 4を再実行してください。<code>src/</code>配下の4つのLambda関数には処理の意図を説明する日本語コメントを入れているので、コード自体を読んで理解する際はそちらも参照してください（<span class="loc loc-git">GitHub</span>上でも同じ内容が読めます）。</p>
+    <p class="desc">リソース構成が変わらない小さな変更（フォームの文言・項目追加、Lambdaのロジック修正など）は、Stage 4のフルデプロイをやり直す必要はありません。<span class="loc loc-local">ローカル</span>の<code>frontend/</code>（<code>contact_info/frontend/</code>）を編集して<code>aws s3 sync</code>で<span class="loc loc-aws">AWS</span>のS3へ直接上書きし、Lambda単体は<span class="loc loc-local">ローカル</span>の<code>src/</code>配下（<code>contact_info/src/</code>）を編集して<code>aws lambda update-function-code</code>でコードだけ差し替えます。IAM権限や環境変数など<code>template.yaml</code>自体を変える場合のみStage 4を再実行してください。<code>src/</code>配下の5つのLambda関数には処理の意図を説明する日本語コメントを入れているので、コード自体を読んで理解する際はそちらも参照してください（<span class="loc loc-git">GitHub</span>上でも同じ内容が読めます）。</p>
     <pre class="cmd"><span class="muted"># フロントエンド（frontend/ 配下を編集後）</span>
 <span class="muted"># 変更したファイルだけS3上書き（差分アップロード）</span>
 aws s3 sync frontend/ s3://employee-portal-websitebucket-m044fsfdbjza/ \

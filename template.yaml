@@ -3,6 +3,7 @@ Transform: AWS::Serverless-2016-10-31
 Description: >
   Employee information portal (S3 static hosting + API Gateway + Lambda + DynamoDB + Cognito).
   CSV import (keyed by employee number) / self-service view & edit / Excel (.xlsx) export (manual, by an admin).
+  Every write to EmployeeTable is recorded (who / when / what changed) into EmployeeHistoryTable via DynamoDB Streams.
   NOTE: this template's comments/descriptions are kept ASCII-only, and the two Japanese
   attribute-name literals below are written as XXXX escapes, because the AWS CLI on the
   deploying Windows machine fails to read non-ASCII template files (system codepage issue).
@@ -49,6 +50,28 @@ Resources:
       KeySchema:
         - AttributeName: "\u793E\u54E1\u756A\u53F7"
           KeyType: HASH
+      # RecordHistoryFunction (below) reads this stream to record change history.
+      StreamSpecification:
+        StreamViewType: NEW_AND_OLD_IMAGES
+
+  # --------------------------------------------------------------------
+  # DynamoDB: change history, one item per write to EmployeeTable
+  # (populated by RecordHistoryFunction, never written to directly)
+  # --------------------------------------------------------------------
+  EmployeeHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: "\u793E\u54E1\u756A\u53F7"
+          AttributeType: S
+        - AttributeName: "\u5909\u66F4ID"
+          AttributeType: S
+      KeySchema:
+        - AttributeName: "\u793E\u54E1\u756A\u53F7"
+          KeyType: HASH
+        - AttributeName: "\u5909\u66F4ID"
+          KeyType: RANGE
 
   # --------------------------------------------------------------------
   # S3: bucket for the static frontend
@@ -299,6 +322,33 @@ Resources:
         - S3WritePolicy:
             BucketName: employee-renrakusaki-data
 
+  # --------------------------------------------------------------------
+  # Lambda: change history recorder (triggered by EmployeeTable's DynamoDB Streams)
+  # Records who (Web self-service / CSV import), when, and what changed on every
+  # registration/update, into EmployeeHistoryTable.
+  # --------------------------------------------------------------------
+  RecordHistoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/record_history/
+      Handler: app.handler
+      Environment:
+        Variables:
+          HISTORY_TABLE_NAME: !Ref EmployeeHistoryTable
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref EmployeeHistoryTable
+        - DynamoDBStreamReadPolicy:
+            TableName: !Ref EmployeeTable
+            StreamName: !Select [3, !Split ["/", !GetAtt EmployeeTable.StreamArn]]
+      Events:
+        EmployeeTableStream:
+          Type: DynamoDB
+          Properties:
+            Stream: !GetAtt EmployeeTable.StreamArn
+            StartingPosition: LATEST
+            BatchSize: 10
+
 Outputs:
   PortalURL:
     Description: HTTPS URL employees use to access the portal
@@ -312,6 +362,9 @@ Outputs:
   DataBucketName:
     Description: Bucket for CSV import / Excel export (upload CSVs under incoming/)
     Value: !Ref DataBucket
+  HistoryTableName:
+    Description: Change history table (who / when / what changed on each write to EmployeeTable)
+    Value: !Ref EmployeeHistoryTable
   ApiUrl:
     Description: API Gateway endpoint
     Value: !Sub "https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com"

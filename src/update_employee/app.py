@@ -7,6 +7,7 @@ import boto3
 TABLE_NAME = os.environ["TABLE_NAME"]
 PK_ATTRIBUTE_NAME = os.environ["PK_ATTRIBUTE_NAME"]
 UPDATED_AT_ATTRIBUTE_NAME = "変更日時"  # 保存の都度サーバー側で上書きする属性名
+ACTOR_ATTRIBUTE_NAME = "最終更新元"  # 変更履歴(EmployeeHistoryTable)が「誰が書いたか」を判別するためのマーカー
 
 JST = timezone(timedelta(hours=9))  # UTC+9。日本時間で「変更日時」を記録するために使う
 
@@ -50,14 +51,17 @@ def handler(event, context):
     if not existing:
         return _response(404, {"message": "従業員情報が見つかりません"})
 
-    # 社員番号（PK）と変更日時はクライアントからの入力で変更させない
+    # 社員番号（PK）・変更日時・最終更新元はクライアントからの入力で変更させない
     # （リクエストボディに紛れ込んでいても無視し、以下で必ずサーバー側の値で上書きする）
     updates.pop(PK_ATTRIBUTE_NAME, None)
     updates.pop(UPDATED_AT_ATTRIBUTE_NAME, None)
+    updates.pop(ACTOR_ATTRIBUTE_NAME, None)
 
     merged = {**existing, **updates, PK_ATTRIBUTE_NAME: employee_id}
     # 保存の瞬間の日本時間を「年月日 時:分」形式で記録。画面はこの文字列をそのまま表示する。
     merged[UPDATED_AT_ATTRIBUTE_NAME] = datetime.now(JST).strftime("%Y-%m-%d %H:%M")
+    # この書き込みが「本人によるWeb操作」であることを記録する(RecordHistoryFunctionが履歴に使う)
+    merged[ACTOR_ATTRIBUTE_NAME] = "Web(本人)"
     table.put_item(Item=merged)
 
     # 更新後の全項目（変更日時込み）を返す。フロントエンドはこれをそのまま画面に反映する。
