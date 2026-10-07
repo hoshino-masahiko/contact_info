@@ -11,7 +11,9 @@
   #profile-message { margin-top: 12px; color: #b00; white-space: pre-wrap; }
   #profile-section { display: none; }
   #phone-note { font-size: 1.2rem; color: #555; margin-top: 8px; }
-  #updated-at { font-size: 0.85rem; color: #555; margin-left: 12px; }
+  #updated-at { font-size: 0.85rem; color: #555; margin-left: 12px; white-space: nowrap; }
+  #action-row { display: flex; align-items: center; flex-wrap: nowrap; overflow-x: auto; }
+  #action-row button { margin-right: 0; flex-shrink: 0; }
 
   .field-group {
     margin-top: 20px;
@@ -56,9 +58,11 @@
 
 <div id="profile-section">
   <form id="profile-form"></form>
-  <button id="save-button">確認・変更</button>
-  <button id="logout-button" type="button">ログアウト</button>
-  <span id="updated-at">前回確認・変更日時: <span id="updated-at-value">-</span></span>
+  <div id="action-row">
+    <button id="save-button">確認・変更</button>
+    <button id="logout-button" type="button">ログアウト</button>
+    <span id="updated-at">前回確認・変更日時: <span id="updated-at-value">-</span></span>
+  </div>
   <div id="profile-message"></div>
 </div>
 
