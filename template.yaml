@@ -270,7 +270,7 @@ Resources:
     Properties:
       CodeUri: src/import_csv/
       Handler: app.handler
-      Timeout: 60
+      Timeout: 300
       Environment:
         Variables:
           TABLE_NAME: !Ref EmployeeTable
