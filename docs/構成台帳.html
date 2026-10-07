@@ -454,6 +454,13 @@
         <tr><td class="name">DynamoDB EmployeeHistoryTable</td><td class="id">employee-portal-EmployeeHistoryTable-*</td><td>DynamoDB</td><td>PK=社員番号・SK=変更ID。RecordHistoryFunctionのみが書き込む変更履歴（誰が・いつ・何を変更したか）</td></tr>
         <tr><td class="name">S3 DataBucket</td><td class="id">employee-renrakusaki-data</td><td>S3</td><td>incoming/ が取込入口、export/ が出力先</td></tr>
 
+        <tr class="group-row"><td colspan="4">IAM（各Lambdaの実行ロール）</td></tr>
+        <tr><td class="name">GetEmployeeFunctionRole</td><td class="id">employee-portal-GetEmployeeFunctionRole-QU7pfpAvUlEE</td><td>IAM Role</td><td>DynamoDBReadPolicy（EmployeeTableの読取のみ）</td></tr>
+        <tr><td class="name">UpdateEmployeeFunctionRole</td><td class="id">employee-portal-UpdateEmployeeFunctionRole-E4kIFxloNDJy</td><td>IAM Role</td><td>DynamoDBCrudPolicy（EmployeeTableの読み書き）</td></tr>
+        <tr><td class="name">ImportCsvFunctionRole</td><td class="id">employee-portal-ImportCsvFunctionRole-Y6KdK2ERh6Qj</td><td>IAM Role</td><td>DynamoDBCrudPolicy＋S3ReadPolicy（DataBucket）＋Cognito管理API（AdminCreateUser等）</td></tr>
+        <tr><td class="name">ExportCsvFunctionRole</td><td class="id">employee-portal-ExportCsvFunctionRole-PSPMWxHzqwrj</td><td>IAM Role</td><td>DynamoDBReadPolicy＋S3WritePolicy（DataBucket）</td></tr>
+        <tr><td class="name">RecordHistoryFunctionRole</td><td class="id">employee-portal-RecordHistoryFunctionRole-sSo8ez1ulQID</td><td>IAM Role</td><td>DynamoDBWritePolicy（EmployeeHistoryTable）＋DynamoDBStreamReadPolicy（EmployeeTable）。<b style="color:var(--rust)">変更履歴機能の追加時に新規作成</b></td></tr>
+
         <tr class="group-row"><td colspan="4">補助（アプリ実行には無関係）</td></tr>
         <tr><td class="name">S3 artifacts</td><td class="id">employee-portal-artifacts-018811607892</td><td>S3</td><td>Lambdaコードのデプロイ用一時置き場。手動作成・CloudFormation管理外</td></tr>
       </tbody>
