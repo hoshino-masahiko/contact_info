@@ -547,7 +547,7 @@
     <li><b>保存ボタン・前回変更日時のラベル変更:</b> 保存ボタンのラベルを「変更する」→「確認・変更」に、画面に表示する日時ラベルを「前回変更日時」→「前回確認・変更日時」に変更（<span class="loc loc-git">GitHub</span><code>frontend/index.html</code>）。内部の属性名（DynamoDBの「変更日時」属性など）は変更していない。</li>
     <li><b>画面タイトルの変更:</b> 画面タイトル・タブタイトルを「緊急連絡先登録ポータル」→「ECグループ　緊急連絡先登録ポータル」に変更（<span class="loc loc-git">GitHub</span><code>frontend/index.html</code>の<code>&lt;title&gt;</code>と<code>&lt;h1&gt;</code>）。</li>
     <li><b>ImportCsvFunctionのタイムアウトを60秒→300秒に延長:</b> 人事提供の122名分のCSV（<code>緊急連絡先一覧.csv</code>、6桁の社員番号1件を除外）を取り込んだ際、1行ごとにDynamoDBの読み書きとCognitoのAPI呼び出しを行う処理が60秒以内に終わらず、95件を処理した時点でタイムアウトにより処理が中断する事象が発生した（2026-10-07）。取込処理自体はアップサート方式で再実行しても安全なため、<span class="loc loc-git">GitHub</span><code>template.yaml</code>の<code>ImportCsvFunction</code>の<code>Timeout</code>を300秒に変更して再デプロイし、同じファイルを再アップロードして全件（122名）の取込を完了させた。今後、大人数のCSVを取り込む際に同じ問題が起きないようにするための恒久対応。</li>
-    <li><b>保存・ログアウトボタンと前回確認・変更日時を1行に固定:</b> 画面幅が狭いと「確認・変更」「ログアウト」ボタンと日時表示が2行に折り返されていたため、この3つを横並びのflexコンテナ（<code>#action-row</code>）にまとめ、折り返さず収まらない場合は横スクロールする形に変更（<span class="loc loc-git">GitHub</span><code>frontend/index.html</code>）。</li>
+    <li><b>保存・ログアウトボタンと前回確認・変更日時を1行に固定:</b> 画面幅が狭いと「確認・変更」「ログアウト」ボタンと日時表示が2行に折り返されていたため、この3つを横並びのflexコンテナ（<code>#action-row</code>）にまとめて1行に固定。当初は収まらない場合に横スクロールする形にしたが、スクロールではなくボタン自体（パディング・フォントサイズ）を小さくして画面幅に収める方式に変更（<span class="loc loc-git">GitHub</span><code>frontend/index.html</code>）。</li>
   </ul>
 </section>
 
