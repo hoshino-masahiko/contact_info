@@ -479,6 +479,25 @@
 </section>
 
 <section>
+  <span class="eyebrow">Security</span>
+  <h2>実装済みのセキュリティ対策</h2>
+  <p>この一式に実際に組み込まれている対策の一覧です。追加の作業やコストなしに適用されているものと、明示的に実装したものの両方を含みます。</p>
+  <ul class="notes">
+    <li><b>DDoS対策（AWS Shield Standard）:</b> すべてのAWSアカウントに無償・自動で適用される標準保護。追加設定は不要。この構成では<span class="loc loc-aws">AWS</span>CloudFrontとRoute53ホストゾーンが直接の保護対象（ネットワーク層・トランスポート層の一般的なDDoS攻撃を自動防御）。より高度な保護が必要な場合は有償のShield Advanced（月額$3,000〜）への切替を検討する余地があるが、コストを抑える方針のため現状はStandardのまま。</li>
+    <li><b>HTTPS通信の強制:</b> CloudFrontの<code>ViewerProtocolPolicy: redirect-to-https</code>により、HTTP接続は自動的にHTTPSへリダイレクトされる。証明書はACM（us-east-1）発行、TLS 1.2以上を要求。</li>
+    <li><b>S3直アクセスの遮断:</b> 上記Design Notes参照。CloudFront経由以外からの閲覧を秘密のRefererヘッダーで拒否。</li>
+    <li><b>認証（Amazon Cognito）:</b> <code>AllowAdminCreateUserOnly: true</code>により、従業員自身によるセルフサインアップは不可。ユーザー作成は管理者操作（CSV取込）経由のみ。</li>
+    <li><b>認可（本人以外のデータへのアクセス不可）:</b> <code>GET/PUT /me</code>は、リクエストパラメータではなくAPI Gatewayが検証済みのCognito IDトークン（JWT）のクレームから社員番号を取得する設計。他人の社員番号を指定して覗き見たり書き換えたりすることはできない。</li>
+    <li><b>APIの認可（JWTオーソライザー）:</b> API Gateway (HTTP API) のデフォルトオーソライザーがCognitoのIDトークンの署名・有効期限を検証してからLambdaを呼び出す。未認証・期限切れのトークンはLambda起動前に拒否される。</li>
+    <li><b>IAMの最小権限:</b> 各Lambdaには用途ごとに絞ったSAMポリシーテンプレート（<code>DynamoDBReadPolicy</code>・<code>DynamoDBCrudPolicy</code>・<code>S3ReadPolicy</code>・<code>S3WritePolicy</code>・<code>DynamoDBStreamReadPolicy</code>など）のみを割り当て、必要なリソース・操作以外への権限は持たせていない。</li>
+    <li><b>秘密値の非表示管理:</b> S3直アクセス遮断に使う<code>OriginVerifySecret</code>はCloudFormationの<code>NoEcho</code>パラメータとして管理し、コンソールの出力やこの文書にも値を残していない。</li>
+    <li><b>保管時の暗号化:</b> DynamoDB（EmployeeTable・EmployeeHistoryTable）はAWS既定で常に保管時暗号化が有効（無効化不可）。S3（WebsiteBucket・DataBucket）も2023年以降のAWSの既定仕様により、デフォルトでSSE-S3による保管時暗号化が適用されている。どちらも追加設定なしに有効。</li>
+    <li><b>変更履歴（監査ログ）:</b> 誰が・いつ・何を変更したかをEmployeeHistoryTableに記録（詳細は上記Design Notes「変更履歴の記録」参照）。不正な変更があった場合の事後追跡に使える。</li>
+  </ul>
+  <p style="margin-top:14px;color:var(--steel);font-size:0.86rem;">既知の弱点として、初期パスワード（社員番号＋生年月日）は第三者が推測可能な値である点は引き続き未解消（README・運用上の注意にも記載済み）。</p>
+</section>
+
+<section>
   <span class="eyebrow">Follow-up</span>
   <h2>個別確認で出た論点の補足</h2>
   <p>ここまでのやり取りで具体的に確認した4点を記録しておきます。</p>
