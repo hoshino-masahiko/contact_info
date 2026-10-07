@@ -387,8 +387,8 @@
         <tr><td class="id">6</td><td class="name">市区町村</td><td>CSV列6</td><td></td></tr>
         <tr><td class="id">7</td><td class="name">番地</td><td>CSV列7</td><td></td></tr>
         <tr><td class="id">8</td><td class="name">建物</td><td>CSV列8</td><td></td></tr>
-        <tr><td class="id">9</td><td class="name">電話番号</td><td>CSV列9</td><td>個人所有の電話番号を入力する運用ルール（会社貸与ではない）。画面上部の案内文で本人に伝えている</td></tr>
-        <tr><td class="id">10</td><td class="name">メールアドレス</td><td>CSV列10</td><td></td></tr>
+        <tr><td class="id">9</td><td class="name">携帯番号(個人所有)</td><td>CSV列9</td><td>個人所有の電話番号を入力する運用ルール（会社貸与ではない）。画面上部の案内文で本人に伝えている。2026-10-07に列名を「電話番号」から変更（下記Changelog参照）</td></tr>
+        <tr><td class="id">10</td><td class="name">メールアドレス(個人所有)</td><td>CSV列10</td><td>2026-10-07に列名を「メールアドレス」から変更（下記Changelog参照）</td></tr>
         <tr><td class="id">11</td><td class="name">LINE ID</td><td>CSV列11</td><td></td></tr>
         <tr><td class="id">12</td><td class="name">氏名(緊急連絡先1)</td><td>CSV列12</td><td>緊急連絡先（1人目）の氏名</td></tr>
         <tr><td class="id">13</td><td class="name">フリガナ(緊急連絡先1)</td><td>CSV列13</td><td></td></tr>
@@ -543,6 +543,7 @@
     <li><b>保存メッセージの表示位置:</b> 「登録しました」等のメッセージを画面上部から、ボタン直下（画面最下部）に移動。ボタン押下後にスクロールなしで見えるようにするための変更。ログイン時のエラーメッセージは引き続き画面上部に表示。</li>
     <li><b>出力形式をCSVからExcel（.xlsx）へ変更:</b> CSV出力では、番地（例: 20-6）や電話番号（先頭の0）などの値が、ファイルの中身自体は正しいにもかかわらず、Excelで直接開いた際に日付や数値だと自動判定され見た目が変換されてしまう問題があった。xlsxはセルごとに型（文字列）を明示できるため、<span class="loc loc-git">GitHub</span><code>src/export_csv/app.py</code>を全列「文字列」書式で書き込む方式に変更し解消。出力ファイル名の拡張子も<code>.xlsx</code>に変更（例: <code>employee-renrakusaki_20260917_154006.xlsx</code>）。この変更は出力（エクスポート）側のみで、取込（インポート）用CSVフォーマットに変更はない。出力したxlsxファイルは（CSVとは別形式のため）そのまま<code>incoming/</code>への再取込には使えない。</li>
     <li><b>変更履歴の追加:</b> 「誰の・どの社員番号の・いつ・何の変更か」を後から確認する手段がなかったため追加。EmployeeTableにDynamoDB Streamsを有効化し、新規<span class="loc loc-git">GitHub</span><code>src/record_history/app.py</code>（<code>RecordHistoryFunction</code>）が登録・更新のたびに変更前後の内容を新規<span class="loc loc-aws">AWS</span>EmployeeHistoryTableへ記録する。あわせて<span class="loc loc-git">GitHub</span><code>src/update_employee/app.py</code>と<code>src/import_csv/app.py</code>に、書き込み元を示す「最終更新元」属性（<code>Web(本人)</code> / <code>CSV取込</code>）を保存の都度セットする処理を追加。閲覧（GET）操作は対象外。</li>
+    <li><b>CSV列名の変更「電話番号」「メールアドレス」→「携帯番号(個人所有)」「メールアドレス(個人所有)」:</b> 人事側から提供された新しい全社員分のCSV（123名、うち113名が新規）で、この2列の見出しがそれぞれ変更されていたことを受けての対応。<b style="color:var(--ink)">画面の項目名・並び順はインポートするファイルに依存するというルール</b>（Data Dictionary冒頭参照）に従い、CSVの列名を元に戻すのではなく、<span class="loc loc-git">GitHub</span><code>frontend/app.js</code>のFIELD_GROUPSと<code>src/export_csv/app.py</code>のHEADERを新しい列名に合わせて改修した。既存10名分の<span class="loc loc-aws">AWS</span>EmployeeTableのデータは、移行スクリプトで旧属性名（電話番号・メールアドレス）から新属性名へ値をコピーし、旧属性は削除済み。緊急連絡先側の「電話番号(緊急連絡先1/2)」「メールアドレス(緊急連絡先1/2)」は列名に変更がないため対象外。</li>
   </ul>
 </section>
 
