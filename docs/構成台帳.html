@@ -545,6 +545,7 @@
     <li><b>変更履歴の追加:</b> 「誰の・どの社員番号の・いつ・何の変更か」を後から確認する手段がなかったため追加。EmployeeTableにDynamoDB Streamsを有効化し、新規<span class="loc loc-git">GitHub</span><code>src/record_history/app.py</code>（<code>RecordHistoryFunction</code>）が登録・更新のたびに変更前後の内容を新規<span class="loc loc-aws">AWS</span>EmployeeHistoryTableへ記録する。あわせて<span class="loc loc-git">GitHub</span><code>src/update_employee/app.py</code>と<code>src/import_csv/app.py</code>に、書き込み元を示す「最終更新元」属性（<code>Web(本人)</code> / <code>CSV取込</code>）を保存の都度セットする処理を追加。閲覧（GET）操作は対象外。</li>
     <li><b>CSV列名の変更「電話番号」「メールアドレス」→「携帯番号(個人所有)」「メールアドレス(個人所有)」:</b> 人事側から提供された新しい全社員分のCSV（123名、うち113名が新規）で、この2列の見出しがそれぞれ変更されていたことを受けての対応。<b style="color:var(--ink)">画面の項目名・並び順はインポートするファイルに依存するというルール</b>（Data Dictionary冒頭参照）に従い、CSVの列名を元に戻すのではなく、<span class="loc loc-git">GitHub</span><code>frontend/app.js</code>のFIELD_GROUPSと<code>src/export_csv/app.py</code>のHEADERを新しい列名に合わせて改修した。既存10名分の<span class="loc loc-aws">AWS</span>EmployeeTableのデータは、移行スクリプトで旧属性名（電話番号・メールアドレス）から新属性名へ値をコピーし、旧属性は削除済み。緊急連絡先側の「電話番号(緊急連絡先1/2)」「メールアドレス(緊急連絡先1/2)」は列名に変更がないため対象外。</li>
     <li><b>保存ボタン・前回変更日時のラベル変更:</b> 保存ボタンのラベルを「変更する」→「確認・変更」に、画面に表示する日時ラベルを「前回変更日時」→「前回確認・変更日時」に変更（<span class="loc loc-git">GitHub</span><code>frontend/index.html</code>）。内部の属性名（DynamoDBの「変更日時」属性など）は変更していない。</li>
+    <li><b>画面タイトルの変更:</b> 画面タイトル・タブタイトルを「緊急連絡先登録ポータル」→「ECグループ　緊急連絡先登録ポータル」に変更（<span class="loc loc-git">GitHub</span><code>frontend/index.html</code>の<code>&lt;title&gt;</code>と<code>&lt;h1&gt;</code>）。</li>
   </ul>
 </section>
 
